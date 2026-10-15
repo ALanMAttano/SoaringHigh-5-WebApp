@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#030B04">
+  <title>SoaringHigh-5</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header>
+    <div class="brand"><img src="icons/icon-192.png" alt=""><span>SoaringHigh-5</span></div>
+    <button id="lang" class="link" type="button">EN</button>
+  </header>
+  <div id="date" class="date"></div>
+  <nav class="tabs">
+    <button id="tab-today" type="button" class="tab active"></button>
+    <button id="tab-todo" type="button" class="tab"></button>
+  </nav>
+  <main>
+    <section id="view-today"><ul id="slots" class="list"></ul></section>
+    <section id="view-todo" hidden>
+      <form id="todo-form" class="row-form">
+        <input id="todo-text" maxlength="200" autocomplete="off">
+        <select id="todo-category"></select>
+        <select id="todo-urgency"></select>
+        <button class="btn primary" type="submit" id="todo-add"></button>
+      </form>
+      <ul id="todo-list" class="list"></ul>
+    </section>
+    <p id="notice" class="notice" hidden></p>
+  </main>
+  <footer>
+    <div class="sync-buttons">
+      <button id="connect" class="btn" type="button"></button>
+      <button id="sync" class="btn" type="button"></button>
+    </div>
+    <div id="sync-status" class="status"></div>
+    <div class="version">SoaringHigh-5 PWA v2.20</div>
+  </footer>
+</body>
+</html>

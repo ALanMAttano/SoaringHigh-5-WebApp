@@ -1,0 +1,7 @@
+{"format":"soaringhigh5-sync","version":1,"updatedAt":"2026-10-15T12:00:00.000Z","deviceId":"win-abc123def456",
+"slotTasks":[{"date":"2026-10-15","slot":0,"text":"Pay rent","urgency":"urgentImportant","status":"pending","backlogId":null,"id":"7d0c2b8e-4a7e-4c55-9a51-2a0f3c1d9e01","updatedAt":"2026-10-15T11:59:00.123Z","deviceId":"win-abc123def456","deleted":false},
+{"date":"2026-10-15","slot":1,"text":"Gone","urgency":"normal","status":"done","backlogId":null,"id":"7d0c2b8e-4a7e-4c55-9a51-2a0f3c1d9e02","updatedAt":"2026-10-15T11:00:00.000Z","deviceId":"win-abc123def456","deleted":true}],
+"backlog":[{"text":"Call mum","category":1,"urgency":"important","status":"open","categoryOrder":0,"urgencyOrder":0,"id":"7d0c2b8e-4a7e-4c55-9a51-2a0f3c1d9e03","updatedAt":"2026-10-15T10:00:00.000Z","deviceId":"pwa-0123456789ab","deleted":false}],
+"slotOrder":{"value":[4,3,2,1,0],"updatedAt":"2026-10-15T09:00:00.000Z","deviceId":"win-abc123def456"},
+"categoryNames":{"value":[null,null,null,null,"Friends"],"updatedAt":"2026-10-15T09:00:00.000Z","deviceId":"win-abc123def456"},
+"lastRolloverDate":"2026-10-15","conflicts":[]}

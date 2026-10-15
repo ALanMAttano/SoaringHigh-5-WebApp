@@ -1,0 +1,15 @@
+{
+  "name": "SoaringHigh-5",
+  "short_name": "SH-5",
+  "description": "Five tasks a day, synced with the SoaringHigh-5 Windows app through Google Drive.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#030B04",
+  "theme_color": "#030B04",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
