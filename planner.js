@@ -254,16 +254,42 @@ function moveIntoSlot(p, item, slot, day) {
   placeInSlot(p, { id: item.id, date: day, slot, text: item.text, urgency: item.urgency, status: 'pending', backlogId: null });
 }
 
-/** HOY reorder (long-press drag, desktop SlotOrdering.Move): puts a slot at display row newIndex; false when nothing changes. */
-export function moveSlotRow(p, slot, newIndex) {
+/** Sort key of a slot on HOY: its task's urgency (pending or done alike); empty slots last. */
+const urgencyRank = (p, slot, day) => {
+  const task = currentInSlot(p, slot, day);
+  return task ? URGENCIES.indexOf(task.urgency) : URGENCIES.length;
+};
+
+/**
+ * HOY display order (display only; the saved slot order and the data stay as they are): most urgent first, ties in
+ * the saved slot order, empty slots last. Done tasks keep their urgency's place, so ticking one does not make the
+ * list jump.
+ */
+export function displaySlots(p, day) {
+  return normalizeSlotOrder(p.slotOrder).map((slot, index) => ({ slot, index, rank: urgencyRank(p, slot, day) }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map(({ slot }) => slot);
+}
+
+/**
+ * HOY long-press reorder: moves the row at display index `from` to `to`, only among rows of the same urgency.
+ * Only the relative order of that group changes in the saved slot order (the group keeps its positions there, so
+ * other slots and the desktop's order of them are untouched). Returns 'moved' | 'unchanged' | 'otherUrgency'.
+ */
+export function reorderWithinUrgency(p, day, from, to) {
+  const rows = displaySlots(p, day);
+  if (from === to || rows[from] === undefined || rows[to] === undefined) return 'unchanged';
+  const rank = urgencyRank(p, rows[from], day);
+  if (urgencyRank(p, rows[to], day) !== rank) return 'otherUrgency';
+  const group = rows.filter((slot) => urgencyRank(p, slot, day) === rank);
+  const moved = rows[from];
+  group.splice(group.indexOf(moved), 1);
+  group.splice(group.indexOf(rows[to]) + (from < to ? 1 : 0), 0, moved);
   const order = normalizeSlotOrder(p.slotOrder);
-  const from = order.indexOf(slot);
-  const to = Math.max(0, Math.min(order.length - 1, newIndex));
-  if (from < 0 || from === to) return false;
-  order.splice(from, 1);
-  order.splice(to, 0, slot);
+  const positions = order.map((slot, index) => (group.includes(slot) ? index : -1)).filter((index) => index >= 0);
+  positions.forEach((position, k) => { order[position] = group[k]; });
   p.slotOrder = order;
-  return true;
+  return 'moved';
 }
 
 /** Day change: the newest unfinished task of each slot moves to today if today's slot is free, other

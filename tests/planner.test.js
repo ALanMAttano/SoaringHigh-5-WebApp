@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { merge, stamp, toPlanner } from '../merge.js';
 import {
   addBacklog, addToFreeSlot, addToSlot, backlogByCategory, backlogByUrgency, completeBacklog, openBacklog, deleteBacklog, deleteSlotTask, emptyPlanner, freeSlots,
-  currentInSlot, moveSlotRow, outranks, sendToToday, setSlotStatus, updateBacklog, updateSlotTask,
+  currentInSlot, displaySlots, outranks, reorderWithinUrgency, sendToToday, setSlotStatus, updateBacklog, updateSlotTask,
 } from '../planner.js';
 
 const DAY = '2026-10-16';
@@ -181,13 +181,42 @@ test('auto-fill: a deleted task pulls the most urgent open item of that category
   assert.deepEqual(p.backlog.map((b) => b.text), ['elsewhere']);
 });
 
-test('HOY reorder: moveSlotRow moves a slot to a row (clamped), false when unchanged', () => {
+/** Slots 0..4 with urgencies; null = empty slot. */
+function withUrgencies(urgencies) {
   const p = emptyPlanner();
-  assert.ok(moveSlotRow(p, 0, 9));
-  assert.deepEqual(p.slotOrder, [1, 2, 3, 4, 0]);
-  assert.equal(moveSlotRow(p, 0, 4), false);
-  assert.ok(moveSlotRow(p, 3, 0));
-  assert.deepEqual(p.slotOrder, [3, 1, 2, 4, 0]);
+  urgencies.forEach((u, slot) => { if (u) addToSlot(p, slot, `t${slot}`, u, DAY, () => `t${slot}`); });
+  return p;
+}
+
+test('HOY display: most urgent first, ties in saved order, empty last, done keeps its urgency place', () => {
+  const p = withUrgencies(['normal', 'urgent', null, 'normal', 'urgentImportant']);
+  assert.deepEqual(displaySlots(p, DAY), [4, 1, 0, 3, 2]);
+  setSlotStatus(p, 't4', 'done');
+  assert.deepEqual(displaySlots(p, DAY), [4, 1, 0, 3, 2]);
+  p.slotOrder = [3, 2, 1, 0, 4];
+  assert.deepEqual(displaySlots(p, DAY), [4, 1, 3, 0, 2]);
+});
+
+test('HOY display sort leaves the data alone', () => {
+  const p = withUrgencies(['wish', 'urgent', 'normal', null, null]);
+  const before = JSON.stringify(p);
+  displaySlots(p, DAY);
+  assert.equal(JSON.stringify(p), before);
+});
+
+test('HOY reorder: only among the same urgency; the group keeps its positions in the saved order', () => {
+  const p = withUrgencies(['normal', 'urgent', 'normal', 'normal', 'wish']);
+  assert.deepEqual(displaySlots(p, DAY), [1, 0, 2, 3, 4]);
+  assert.equal(reorderWithinUrgency(p, DAY, 3, 1), 'moved'); // slot 3 above slot 0
+  assert.deepEqual(displaySlots(p, DAY), [1, 3, 0, 2, 4]);
+  assert.deepEqual(p.slotOrder, [3, 1, 0, 2, 4]); // urgent (1) and wish (4) kept their places
+  assert.equal(reorderWithinUrgency(p, DAY, 1, 3), 'moved'); // and back down to the end of its group
+  assert.deepEqual(displaySlots(p, DAY), [1, 0, 2, 3, 4]);
+  const before = JSON.stringify(p);
+  assert.equal(reorderWithinUrgency(p, DAY, 0, 2), 'otherUrgency');
+  assert.equal(reorderWithinUrgency(p, DAY, 4, 3), 'otherUrgency');
+  assert.equal(reorderWithinUrgency(p, DAY, 2, 2), 'unchanged');
+  assert.equal(JSON.stringify(p), before);
 });
 
 test('TODO tab: all open items in creation order, whatever their urgency or category', () => {

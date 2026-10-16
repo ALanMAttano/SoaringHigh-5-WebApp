@@ -1,9 +1,9 @@
 // SoaringHigh-5 PWA: today's 5 slots + TODO list + Settings, stored locally (offline-first) and synced through Google Drive.
 import { GOOGLE_CLIENT_ID } from './config.js';
-import { CATEGORY_COUNT, URGENCIES, normalizeSlotOrder, stamp, toPlanner, parseDocument } from './merge.js';
+import { CATEGORY_COUNT, URGENCIES, stamp, toPlanner, parseDocument } from './merge.js';
 import {
   MAX_TEXT_LENGTH, addBacklog, addToFreeSlot, addToSlot, backlogByCategory, backlogByUrgency, completeBacklog, currentInSlot, deleteBacklog, deleteSlotTask, emptyPlanner,
-  ensureRollover, isSlotFree, localDay, moveSlotRow, sendToToday, setSlotStatus, todayTaskFor, updateBacklog, updateSlotTask,
+  displaySlots, ensureRollover, isSlotFree, localDay, reorderWithinUrgency, sendToToday, setSlotStatus, todayTaskFor, updateBacklog, updateSlotTask,
 } from './planner.js';
 import { GoogleAuth, DriveStore } from './sync.js';
 import { syncOnce } from './engine.js';
@@ -258,7 +258,7 @@ function confirmDelete(text, remove) {
 function renderSlots() {
   const today = localDay();
   refreshAddForm('today', t().placeholder, busyFor(null));
-  $('slots').replaceChildren(...normalizeSlotOrder(state.planner.slotOrder).map((slot) => {
+  $('slots').replaceChildren(...displaySlots(state.planner, today).map((slot) => {
     const task = currentInSlot(state.planner, slot, today);
     if (task?.status === 'pending' && editing.is('task', task.id)) return editorRow(taskEditor(task, busyFor(task.slot)));
     if (task?.status === 'pending') return pendingTaskRow(task);
@@ -307,10 +307,11 @@ function taskEditor(task, busyCategory) {
     onDelete: () => confirmDelete(task.text, () => deleteSlotTask(state.planner, task.id, localDay())) });
 }
 
-/** HOY long-press drag: the slot shown at row `from` moves to row `to` (synced like the desktop's slot order). */
+/** HOY long-press drag: only among tasks of the same urgency; otherwise the row snaps back with a short notice. */
 function moveSlotToRow(from, to) {
-  const slot = normalizeSlotOrder(state.planner.slotOrder)[from];
-  if (moveSlotRow(state.planner, slot, to)) persist();
+  const result = reorderWithinUrgency(state.planner, localDay(), from, to);
+  if (result === 'moved') persist();
+  else if (result === 'otherUrgency') showNotice(t().sameUrgencyOnly);
 }
 
 function markStatus(id, status) {
