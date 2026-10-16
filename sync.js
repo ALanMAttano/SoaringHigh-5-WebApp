@@ -54,9 +54,10 @@ export class GoogleAuth {
 export class DriveStore {
   constructor(auth) { this.auth = auth; }
 
-  async send(method, url, body, contentType) {
+  async send(method, url, body, contentType, ifMatch) {
     const headers = { Authorization: `Bearer ${await this.auth.accessToken()}` };
     if (contentType) headers['Content-Type'] = contentType;
+    if (ifMatch) headers['If-Match'] = `"${ifMatch}"`;
     const r = await fetch(url, { method, headers, body });
     if (!r.ok) throw new DriveError(r.status);
     return r.text();
@@ -80,5 +81,8 @@ export class DriveStore {
     return JSON.parse(await this.send('POST', `${UPLOAD}?uploadType=multipart&fields=id,version`, body, `multipart/related; boundary=${boundary}`));
   }
 
-  update(id, content) { return this.send('PATCH', `${UPLOAD}/${encodeURIComponent(id)}?uploadType=media&fields=id,version`, content, 'application/json'); }
+  /** Overwrites the file; `expectedVersion` (the version we read) goes out as If-Match, a mismatch may give 412. */
+  update(id, content, expectedVersion) {
+    return this.send('PATCH', `${UPLOAD}/${encodeURIComponent(id)}?uploadType=media&fields=id,version`, content, 'application/json', expectedVersion);
+  }
 }

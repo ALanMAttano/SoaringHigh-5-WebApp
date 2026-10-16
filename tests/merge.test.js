@@ -136,12 +136,17 @@ test('planner rollover: newest pending moves to today, older ones go to TODO, fi
 
 function fakeDrive(content = null) {
   return {
-    content, rev: content ? 1 : 0, uploads: 0, beforeVersion: null,
+    content, rev: content ? 1 : 0, uploads: 0, rejected: 0, beforeVersion: null, beforeUpdate: null, afterUpdate: null, honorIfMatch: false,
     async find() { return this.content ? { id: 'f', version: String(this.rev) } : null; },
     async download() { return this.content; },
     async version() { this.beforeVersion?.(); return String(this.rev); },
     async create(c) { this.content = c; this.rev = 1; this.uploads++; return { id: 'f', version: '1' }; },
-    async update(id, c) { this.content = c; this.rev++; this.uploads++; },
+    async update(id, c, expected) {
+      this.beforeUpdate?.();
+      if (this.honorIfMatch && expected !== String(this.rev)) { this.rejected++; const e = new Error('412'); e.status = 412; throw e; }
+      this.content = c; this.rev++; this.uploads++;
+      this.afterUpdate?.();
+    },
   };
 }
 
@@ -161,4 +166,49 @@ test('engine: creates, merges, skips identical upload, re-merges on race, refuse
   assert.equal((await syncOnce(bad, doc(), null, 'pc')).status, 'failed');
   const denied = { find: async () => { const e = new Error('x'); e.status = 401; throw e; } };
   assert.equal((await syncOnce(denied, doc(), null, 'pc')).status, 'authFailed');
+});
+
+const texts = (d) => JSON.parse(d.content).backlog.map((b) => b.text).sort();
+
+test('engine: 412 on update re-reads, re-merges and keeps everything', async () => {
+  const d = fakeDrive(JSON.stringify(doc([], [item('phone', 'phone', 0, 'phone')])));
+  d.honorIfMatch = true;
+  let raced = false;
+  d.beforeUpdate = () => {
+    if (raced) return;
+    raced = true;
+    const other = JSON.parse(d.content);
+    other.backlog.push(item('tablet', 'tablet', 0, 'tablet'));
+    d.content = JSON.stringify(other);
+    d.rev = 5;
+  };
+  const r = await syncOnce(d, doc([], [item('pc', 'pc', 0, 'pc')]), null, 'pc', () => T0);
+  assert.equal(r.status, 'synced');
+  assert.equal(d.rejected, 1);
+  assert.equal(d.uploads, 1);
+  assert.deepEqual(texts(d), ['pc', 'phone', 'tablet']);
+});
+
+test('engine: Drive ignoring If-Match is caught by the post-upload check', async () => {
+  const d = fakeDrive(JSON.stringify(doc([], [item('phone', 'phone', 0, 'phone')])));
+  let overwritten = false;
+  d.afterUpdate = () => {
+    if (overwritten) return;
+    overwritten = true;
+    d.content = JSON.stringify(doc([], [item('phone', 'phone', 0, 'phone'), item('tablet', 'tablet', 0, 'tablet')]));
+    d.rev++;
+  };
+  const r = await syncOnce(d, doc([], [item('pc', 'pc', 0, 'pc')]), null, 'pc', () => T0);
+  assert.equal(r.status, 'synced');
+  assert.equal(d.uploads, 2);
+  assert.deepEqual(texts(d), ['pc', 'phone', 'tablet']);
+});
+
+test('engine: remote changing on every attempt gives busy and overwrites nothing', async () => {
+  const d = fakeDrive(JSON.stringify(doc([], [item('phone', 'phone', 0, 'phone')])));
+  d.honorIfMatch = true;
+  d.beforeUpdate = () => { d.rev++; };
+  const r = await syncOnce(d, doc([], [item('pc', 'pc', 0, 'pc')]), null, 'pc', () => T0);
+  assert.equal(r.status, 'busy');
+  assert.deepEqual(texts(d), ['phone']);
 });

@@ -195,8 +195,35 @@ export function normalize(doc, now) {
       || ordinal(y.deviceId || '', x.deviceId || '') || ordinal(x.id, y.id));
     for (const loser of group.slice(1)) resolveClashLoser(doc, loser, group[0], at);
   }
+  dropBacklogCopiesOfLiveTasks(doc);
+  removeDuplicateOpenItems(doc, now, at);
   if (doc.slotOrder) doc.slotOrder.value = normalizeSlotOrder(doc.slotOrder.value);
   doc.conflicts = capConflicts(doc.conflicts);
+}
+
+/** A task returned to TODO on one device (item id = task id) but carried over on another: drop the TODO copy. */
+function dropBacklogCopiesOfLiveTasks(doc) {
+  const live = new Set(doc.slotTasks.filter((t) => !t.deleted).map((t) => t.id));
+  for (const b of doc.backlog) if (!b.deleted && live.has(b.id)) b.deleted = true;
+}
+
+/** Open TODO items with the same text + category collapse to the newest; links follow; each drop is logged. */
+function removeDuplicateOpenItems(doc, now, at) {
+  const groups = new Map();
+  for (const b of doc.backlog.filter((x) => !x.deleted && (x.status ?? 'open') === 'open')) {
+    const key = JSON.stringify([b.text, b.category]);
+    groups.set(key, [...(groups.get(key) || []), b]);
+  }
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    group.sort((x, y) => (effective(y.updatedAt, now) - effective(x.updatedAt, now)) || ordinal(y.deviceId || '', x.deviceId || '') || ordinal(x.id, y.id));
+    const kept = group[0];
+    for (const dup of group.slice(1)) {
+      dup.deleted = true;
+      for (const t of doc.slotTasks) if (!t.deleted && t.backlogId === dup.id) t.backlogId = kept.id;
+      doc.conflicts.push({ at, kind: 'dedup', id: dup.id, keptDevice: kept.deviceId, lostDevice: dup.deviceId, lost: describeItem(dup) + ' (duplicate)' });
+    }
+  }
 }
 
 const isPending = (t) => (t.status ?? 'pending') === 'pending' ? 1 : 0;

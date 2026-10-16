@@ -97,12 +97,13 @@ export function ensureRollover(p, today) {
 
 function returnToBacklog(p, t) {
   p.slotTasks.splice(p.slotTasks.indexOf(t), 1);
-  const item = t.backlogId ? p.backlog.find((b) => b.id === t.backlogId) : null;
+  // The TODO item takes the task's own id: two devices returning the same task give ONE item after sync.
+  const item = (t.backlogId ? p.backlog.find((b) => b.id === t.backlogId) : null) ?? p.backlog.find((b) => b.id === t.id);
   if (item) {
     item.status = 'open';
     return;
   }
-  p.backlog.push({ id: crypto.randomUUID(), text: t.text, category: t.slot, urgency: t.urgency, status: 'open',
+  p.backlog.push({ id: t.id, text: t.text, category: t.slot, urgency: t.urgency, status: 'open',
     categoryOrder: nextOrder(p, (b) => b.category === t.slot, 'categoryOrder'),
     urgencyOrder: nextOrder(p, (b) => b.urgency === t.urgency, 'urgencyOrder') });
 }
