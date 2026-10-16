@@ -1,5 +1,5 @@
 // App-shell cache: the PWA opens offline. Google sign-in and Drive calls always go to the network.
-const CACHE = 'sh5-pwa-v2.22';
+const CACHE = 'sh5-pwa-v2.27';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'planner.js', 'merge.js', 'engine.js', 'sync.js', 'i18n.js', 'config.js',
   'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 

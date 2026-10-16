@@ -10,7 +10,7 @@ header { display: flex; align-items: center; justify-content: space-between; pad
 .brand img { width: 32px; height: 32px; }
 .date { color: var(--soft); margin-bottom: 10px; }
 .tabs { display: flex; gap: 8px; margin-bottom: 10px; }
-.tab, .btn { font: inherit; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--neon); background: var(--panel);
+.tab, .btn { min-height: 44px; font: inherit; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--neon); background: var(--panel);
   border: 1px solid var(--border-hi); border-radius: 6px; padding: 9px 14px; cursor: pointer; }
 .tab.active { background: var(--panel-hi); box-shadow: 0 0 10px rgba(0,255,65,.35); }
 .btn:hover, .btn:active, .tab:hover { background: var(--lime); color: #000; border-color: var(--lime); }
@@ -18,7 +18,7 @@ header { display: flex; align-items: center; justify-content: space-between; pad
 .btn:disabled { color: var(--done); border-color: var(--border); background: var(--panel); box-shadow: none; }
 .link { background: none; border: 0; color: var(--dim); font: inherit; font-weight: 700; cursor: pointer; }
 .list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
-.list li { display: flex; gap: 10px; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); min-height: 58px; }
+.list li { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); min-height: 58px; }
 .list li:last-child { border-bottom: 0; }
 .cat { width: 78px; flex: none; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
 .text { flex: 1; word-break: break-word; }
@@ -36,3 +36,16 @@ footer { margin-top: 16px; }
 .sync-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
 .status { color: var(--soft); margin-top: 8px; min-height: 1.3em; }
 .version { color: var(--done); font-size: 12px; margin-top: 10px; }
+.btn.danger { color: var(--danger); border-color: var(--danger); }
+.btn.danger:hover, .btn.danger:active { background: var(--danger); color: #000; }
+.tappable { cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+.tappable:active { color: var(--lime); }
+.list li.group { min-height: 0; padding: 8px 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  background: var(--bg); text-shadow: 0 0 6px currentColor; }
+.tag { flex: none; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; color: var(--lime); border: 1px solid var(--lime); }
+.editor { flex: 1 1 100%; display: flex; flex-direction: column; gap: 8px; }
+.editor-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.editor-row select { flex: 1 1 140px; }
+input, select { min-height: 44px; }
+.hint { color: var(--done); font-size: 13px; margin: 8px 2px 0; }
+.editor .editor-text { flex: none; width: 100%; }

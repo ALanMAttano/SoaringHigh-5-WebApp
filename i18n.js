@@ -1,35 +1,68 @@
-// Spanish + English texts (Spanish is the default when the browser is not English).
+// Spanish, English and Italian texts (Spanish is the default when the browser is neither English nor Italian).
 const TEXTS = {
   es: {
-    today: 'HOY', todo: 'TODO', add: 'AGREGAR', done: 'HECHO', undo: 'DESHACER', cancel: 'CANCELAR',
+    today: 'HOY', todo: 'TODO', add: 'AGREGAR', save: 'GUARDAR', delete: 'BORRAR', done: 'HECHO', undo: 'DESHACER', cancel: 'CANCELAR',
+    toToday: '→ HOY', inToday: 'EN HOY', locale: 'es-AR',
     emptySlot: 'Libre: tocá para agregar una tarea', placeholder: 'Tarea de hoy…', todoPlaceholder: 'Nueva tarea para la lista…',
+    editHint: 'Tocá una tarea para editarla.', category: 'Categoría', urgencyLabel: 'Urgencia',
     connect: 'CONECTAR GOOGLE DRIVE', disconnect: 'DESCONECTAR', syncNow: 'SINCRONIZAR',
     notConfigured: 'Falta el client ID en config.js (ver docs/SYNC_SETUP.md).',
     off: 'Sin conectar: los datos quedan solo en este teléfono.', running: 'Sincronizando…', synced: 'Sincronizado {0}',
     offline: 'Sin conexión: se sincroniza al volver la red.', authFailed: 'Tocá SINCRONIZAR para volver a iniciar sesión.',
     failed: 'Falló la sincronización.', busy: 'Otro dispositivo estaba sincronizando; reintentá.', reconnect: 'Sesión vencida: tocá SINCRONIZAR.',
     slotBusy: 'Ese lugar ya tiene una tarea pendiente.', carried: '{0} tarea(s) pasaron a hoy.', conflicts: 'Conflictos guardados: {0}',
+    noFreeSlot: 'Los 5 lugares de hoy están ocupados: terminá o borrá una tarea primero.', sent: 'Agregada a hoy en {0}.',
+    alreadyToday: 'Esa tarea ya está en la lista de hoy.', empty: 'Escribí un texto primero.', confirmDelete: '¿Borrar «{0}»?',
     noTodo: 'La lista está vacía.', categories: ['Finanzas', 'Familia', 'Casa', 'Yo', 'Amigos'],
     urgency: { urgentImportant: 'URG+IMP', urgent: 'URGENTE', important: 'IMPORTANTE', normal: 'NORMAL', wish: 'DESEO' },
+    urgencyGroup: { urgentImportant: 'Urgente e importante', urgent: 'Urgente', important: 'Importante', normal: 'Normal', wish: 'Deseo' },
   },
   en: {
-    today: 'TODAY', todo: 'TODO', add: 'ADD', done: 'DONE', undo: 'UNDO', cancel: 'CANCEL',
+    today: 'TODAY', todo: 'TODO', add: 'ADD', save: 'SAVE', delete: 'DELETE', done: 'DONE', undo: 'UNDO', cancel: 'CANCEL',
+    toToday: '→ TODAY', inToday: 'TODAY', locale: 'en-US',
     emptySlot: 'Free: tap to add a task', placeholder: "Today's task…", todoPlaceholder: 'New task for the list…',
+    editHint: 'Tap a task to edit it.', category: 'Category', urgencyLabel: 'Urgency',
     connect: 'CONNECT GOOGLE DRIVE', disconnect: 'DISCONNECT', syncNow: 'SYNC NOW',
     notConfigured: 'Client ID missing in config.js (see docs/SYNC_SETUP.md).',
     off: 'Not connected: data stays on this phone only.', running: 'Syncing…', synced: 'Synced {0}',
     offline: 'Offline: will sync when the network is back.', authFailed: 'Tap SYNC NOW to sign in again.',
     failed: 'Sync failed.', busy: 'Another device was syncing; try again.', reconnect: 'Session expired: tap SYNC NOW.',
     slotBusy: 'That slot already has a pending task.', carried: '{0} task(s) moved to today.', conflicts: 'Conflicts kept: {0}',
+    noFreeSlot: "All 5 of today's slots are taken: finish or delete a task first.", sent: 'Added to today in {0}.',
+    alreadyToday: "That task is already on today's list.", empty: 'Type some text first.', confirmDelete: 'Delete “{0}”?',
     noTodo: 'The list is empty.', categories: ['Finance', 'Family', 'Home', 'Me', 'Friends'],
     urgency: { urgentImportant: 'URG+IMP', urgent: 'URGENT', important: 'IMPORTANT', normal: 'NORMAL', wish: 'WISH' },
+    urgencyGroup: { urgentImportant: 'Urgent & important', urgent: 'Urgent', important: 'Important', normal: 'Normal', wish: 'Wish' },
+  },
+  it: {
+    today: 'OGGI', todo: 'TODO', add: 'AGGIUNGI', save: 'SALVA', delete: 'ELIMINA', done: 'FATTO', undo: 'ANNULLA', cancel: 'CHIUDI',
+    toToday: '→ OGGI', inToday: 'OGGI', locale: 'it-IT',
+    emptySlot: 'Libero: tocca per aggiungere un compito', placeholder: 'Compito di oggi…', todoPlaceholder: 'Nuovo compito per la lista…',
+    editHint: 'Tocca un compito per modificarlo.', category: 'Categoria', urgencyLabel: 'Urgenza',
+    connect: 'COLLEGA GOOGLE DRIVE', disconnect: 'SCOLLEGA', syncNow: 'SINCRONIZZA',
+    notConfigured: 'Manca il client ID in config.js (vedi docs/SYNC_SETUP.md).',
+    off: 'Non collegato: i dati restano solo su questo telefono.', running: 'Sincronizzazione…', synced: 'Sincronizzato {0}',
+    offline: 'Offline: si sincronizza quando torna la rete.', authFailed: 'Tocca SINCRONIZZA per accedere di nuovo.',
+    failed: 'Sincronizzazione non riuscita.', busy: 'Un altro dispositivo stava sincronizzando; riprova.', reconnect: 'Sessione scaduta: tocca SINCRONIZZA.',
+    slotBusy: 'Quel posto ha già un compito in sospeso.', carried: '{0} compito/i spostati a oggi.', conflicts: 'Conflitti salvati: {0}',
+    noFreeSlot: 'I 5 posti di oggi sono occupati: completa o elimina prima un compito.', sent: 'Aggiunto a oggi in {0}.',
+    alreadyToday: 'Quel compito è già nella lista di oggi.', empty: 'Scrivi prima un testo.', confirmDelete: 'Eliminare «{0}»?',
+    noTodo: 'La lista è vuota.', categories: ['Finanze', 'Famiglia', 'Casa', 'Io', 'Amici'],
+    urgency: { urgentImportant: 'URG+IMP', urgent: 'URGENTE', important: 'IMPORTANTE', normal: 'NORMALE', wish: 'DESIDERIO' },
+    urgencyGroup: { urgentImportant: 'Urgente e importante', urgent: 'Urgente', important: 'Importante', normal: 'Normale', wish: 'Desiderio' },
   },
 };
 
+export const LANGUAGES = Object.keys(TEXTS);
+
 export function pickLanguage(saved, browserLanguages) {
   if (saved && TEXTS[saved]) return saved;
-  return (browserLanguages || []).some((l) => l.toLowerCase().startsWith('en')) ? 'en' : 'es';
+  const prefix = (browserLanguages || []).map((l) => l.toLowerCase().slice(0, 2)).find((l) => l === 'en' || l === 'it');
+  return prefix ?? 'es';
 }
+
+/** The language after `lang` in the header toggle (es → en → it → es). */
+export const nextLanguage = (lang) => LANGUAGES[(LANGUAGES.indexOf(lang) + 1) % LANGUAGES.length];
 
 export function texts(lang) { return TEXTS[lang] || TEXTS.es; }
 
