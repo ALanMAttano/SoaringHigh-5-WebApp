@@ -272,10 +272,12 @@ const busyFor = (own) => (slot) => slot !== own && !isSlotFree(state.planner, sl
 
 /**
  * One task row, same markup everywhere: category, urgency pill, actions and the text. CSS places them: portrait =
- * category · urgency · actions on top and the text below at full width; landscape = one line.
+ * category · urgency · actions on top and the text below at full width; landscape = one line. `category: null`
+ * leaves the label out (the TODO tab's group heading already names it).
  */
 function taskRow({ category, text, textClass = '', urgency = null, onTap, actions = [] }) {
-  return el('li', { className: 'task-row' }, categoryLabel(category),
+  const hasCategory = category !== null;
+  return el('li', { className: hasCategory ? 'task-row' : 'task-row no-cat' }, hasCategory ? categoryLabel(category) : null,
     urgency ? urgencyPill(urgency) : el('span', { className: 'pill-space' }),
     el('div', { className: 'actions' }, ...actions),
     tappable(el('span', { className: `text ${textClass}`.trim(), textContent: text }), onTap));
@@ -339,7 +341,7 @@ function groupRows({ title, color, items }) {
 
 function itemRow(item) {
   const inToday = todayTaskFor(state.planner, item.id, localDay());
-  return taskRow({ category: item.category, text: item.text, urgency: item.urgency, onTap: () => editing.open('item', item.id),
+  return taskRow({ category: state.view === 'todo' ? null : item.category, text: item.text, urgency: item.urgency, onTap: () => editing.open('item', item.id),
     actions: [inToday ? el('span', { className: 'tag', textContent: t().inToday }) : button(t().toToday, () => sendItemToToday(item)),
       button(t().done, () => { completeBacklog(state.planner, item.id, localDay()); persist(); })] });
 }

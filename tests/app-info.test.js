@@ -27,3 +27,12 @@ test('the installed app follows the phone rotation (no locked portrait)', () => 
   const manifest = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));
   assert.equal(manifest.orientation, 'any');
 });
+
+test('TODO tab rows without a category label have a layout in portrait and landscape', () => {
+  const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  const rules = css.match(/li\.task-row\.no-cat \{[^}]*grid-template-areas:[^}]*\}/g) ?? [];
+  assert.equal(rules.length, 2);
+  assert.ok(rules.every((r) => !/grid-template-areas:[^;]*\bcat\b/.test(r)));
+  const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(app, /category: state\.view === 'todo' \? null : item\.category/);
+});
