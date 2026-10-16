@@ -9,7 +9,7 @@ import { LANGUAGES, LANGUAGE_ABBREVIATIONS, format } from './i18n.js';
 
 /**
  * ctx: { t, settings, update(next, { rerender, sync }), previewTuning(hue, saturation), sync: { connected, configured,
- * busy, statusText, lastSyncText, conflicts }, onConnect(), onSyncNow() }
+ * busy, statusText, lastSyncText }, onConnect(), onSyncNow() }
  */
 export function renderSettings(container, ctx) {
   container.replaceChildren(
@@ -72,7 +72,6 @@ function syncRows({ t, sync, onConnect, onSyncNow }) {
   now.disabled = !sync.connected || sync.busy;
   return [row(t.status, el('span', { className: 'value', textContent: sync.statusText })),
     row(t.lastSync, el('span', { className: 'value', textContent: sync.lastSyncText ?? '–' })),
-    row(t.conflictsLabel, el('span', { className: 'value', textContent: String(sync.conflicts) })),
     row('Google Drive', connect, now)];
 }
 
