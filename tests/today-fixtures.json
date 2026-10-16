@@ -1,0 +1,646 @@
+{
+ "day": "2026-10-16",
+ "note": "Wish #7/#8 rules: checked by pwa/tests/today-parity.test.js and TodayParityTests.cs",
+ "cases": [
+  {
+   "name": "done fills with most urgent of the category",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 2,
+      "text": "task 1",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 2,
+      "urgency": "normal",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 10
+     },
+     {
+      "id": "00000000-0000-0000-0000-000000000011",
+      "text": "item 11",
+      "category": 2,
+      "urgency": "urgent",
+      "status": "open",
+      "categoryOrder": 1,
+      "urgencyOrder": 11
+     },
+     {
+      "id": "00000000-0000-0000-0000-000000000012",
+      "text": "item 12",
+      "category": 3,
+      "urgency": "urgentImportant",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 12
+     }
+    ],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "done",
+    "id": "00000000-0000-0000-0000-000000000001"
+   },
+   "expect": {
+    "result": "true",
+    "slots": [
+     null,
+     null,
+     "00000000-0000-0000-0000-000000000011:pending",
+     null,
+     null
+    ],
+    "backlog": [
+     "00000000-0000-0000-0000-000000000010:2:normal:open",
+     "00000000-0000-0000-0000-000000000012:3:urgentImportant:open"
+    ]
+   }
+  },
+  {
+   "name": "delete fills; tie broken by category order",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 0,
+      "text": "task 1",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 0,
+      "urgency": "important",
+      "status": "open",
+      "categoryOrder": 1,
+      "urgencyOrder": 10
+     },
+     {
+      "id": "00000000-0000-0000-0000-000000000011",
+      "text": "item 11",
+      "category": 0,
+      "urgency": "important",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 11
+     }
+    ],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "delete",
+    "id": "00000000-0000-0000-0000-000000000001"
+   },
+   "expect": {
+    "result": "true",
+    "slots": [
+     "00000000-0000-0000-0000-000000000011:pending",
+     null,
+     null,
+     null,
+     null
+    ],
+    "backlog": [
+     "00000000-0000-0000-0000-000000000010:0:important:open"
+    ]
+   }
+  },
+  {
+   "name": "delete fills; full tie broken by stored order",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 0,
+      "text": "task 1",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 0,
+      "urgency": "wish",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 10
+     },
+     {
+      "id": "00000000-0000-0000-0000-000000000011",
+      "text": "item 11",
+      "category": 0,
+      "urgency": "wish",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 11
+     }
+    ],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "delete",
+    "id": "00000000-0000-0000-0000-000000000001"
+   },
+   "expect": {
+    "result": "true",
+    "slots": [
+     "00000000-0000-0000-0000-000000000010:pending",
+     null,
+     null,
+     null,
+     null
+    ],
+    "backlog": [
+     "00000000-0000-0000-0000-000000000011:0:wish:open"
+    ]
+   }
+  },
+  {
+   "name": "closed items are skipped",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 4,
+      "text": "task 1",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 4,
+      "urgency": "urgentImportant",
+      "status": "done",
+      "categoryOrder": 0,
+      "urgencyOrder": 10
+     },
+     {
+      "id": "00000000-0000-0000-0000-000000000011",
+      "text": "item 11",
+      "category": 4,
+      "urgency": "wish",
+      "status": "open",
+      "categoryOrder": 1,
+      "urgencyOrder": 11
+     }
+    ],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "done",
+    "id": "00000000-0000-0000-0000-000000000001"
+   },
+   "expect": {
+    "result": "true",
+    "slots": [
+     null,
+     null,
+     null,
+     null,
+     "00000000-0000-0000-0000-000000000011:pending"
+    ],
+    "backlog": [
+     "00000000-0000-0000-0000-000000000010:4:urgentImportant:done"
+    ]
+   }
+  },
+  {
+   "name": "cancel does not fill",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 1,
+      "text": "task 1",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 1,
+      "urgency": "normal",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 10
+     }
+    ],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "cancel",
+    "id": "00000000-0000-0000-0000-000000000001"
+   },
+   "expect": {
+    "result": "true",
+    "slots": [
+     null,
+     "00000000-0000-0000-0000-000000000001:cancelled",
+     null,
+     null,
+     null
+    ],
+    "backlog": [
+     "00000000-0000-0000-0000-000000000010:1:normal:open"
+    ]
+   }
+  },
+  {
+   "name": "done with no candidate keeps the done task",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 1,
+      "text": "task 1",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 2,
+      "urgency": "normal",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 10
+     }
+    ],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "done",
+    "id": "00000000-0000-0000-0000-000000000001"
+   },
+   "expect": {
+    "result": "true",
+    "slots": [
+     null,
+     "00000000-0000-0000-0000-000000000001:done",
+     null,
+     null,
+     null
+    ],
+    "backlog": [
+     "00000000-0000-0000-0000-000000000010:2:normal:open"
+    ]
+   }
+  },
+  {
+   "name": "move to empty slot of another category",
+   "planner": {
+    "slotTasks": [],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 1,
+      "urgency": "urgent",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 10
+     }
+    ],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "move",
+    "id": "00000000-0000-0000-0000-000000000010",
+    "slot": 3
+   },
+   "expect": {
+    "result": "moved",
+    "slots": [
+     null,
+     null,
+     null,
+     "00000000-0000-0000-0000-000000000010:pending",
+     null
+    ],
+    "backlog": []
+   }
+  },
+  {
+   "name": "move onto busy slot swaps",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 3,
+      "text": "task 1",
+      "urgency": "important",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 1,
+      "urgency": "urgent",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 10
+     }
+    ],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "move",
+    "id": "00000000-0000-0000-0000-000000000010",
+    "slot": 3
+   },
+   "expect": {
+    "result": "swapped",
+    "slots": [
+     null,
+     null,
+     null,
+     "00000000-0000-0000-0000-000000000010:pending",
+     null
+    ],
+    "backlog": [
+     "00000000-0000-0000-0000-000000000001:3:important:open"
+    ]
+   }
+  },
+  {
+   "name": "send uses own free slot",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 0,
+      "text": "task 1",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 2,
+      "urgency": "normal",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 10
+     }
+    ],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "send",
+    "id": "00000000-0000-0000-0000-000000000010"
+   },
+   "expect": {
+    "result": "moved@2",
+    "slots": [
+     "00000000-0000-0000-0000-000000000001:pending",
+     null,
+     "00000000-0000-0000-0000-000000000010:pending",
+     null,
+     null
+    ],
+    "backlog": []
+   }
+  },
+  {
+   "name": "send falls back to first free slot",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 2,
+      "text": "task 1",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 2,
+      "urgency": "normal",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 10
+     }
+    ],
+    "slotOrder": [
+     4,
+     3,
+     2,
+     1,
+     0
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "send",
+    "id": "00000000-0000-0000-0000-000000000010"
+   },
+   "expect": {
+    "result": "moved@4",
+    "slots": [
+     null,
+     null,
+     "00000000-0000-0000-0000-000000000001:pending",
+     null,
+     "00000000-0000-0000-0000-000000000010:pending"
+    ],
+    "backlog": []
+   }
+  },
+  {
+   "name": "send swaps own slot when all are busy",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 0,
+      "text": "task 1",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     },
+     {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "date": "2026-10-16",
+      "slot": 1,
+      "text": "task 2",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     },
+     {
+      "id": "00000000-0000-0000-0000-000000000003",
+      "date": "2026-10-16",
+      "slot": 2,
+      "text": "task 3",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     },
+     {
+      "id": "00000000-0000-0000-0000-000000000004",
+      "date": "2026-10-16",
+      "slot": 3,
+      "text": "task 4",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     },
+     {
+      "id": "00000000-0000-0000-0000-000000000005",
+      "date": "2026-10-16",
+      "slot": 4,
+      "text": "task 5",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 2,
+      "urgency": "wish",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 10
+     }
+    ],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "send",
+    "id": "00000000-0000-0000-0000-000000000010"
+   },
+   "expect": {
+    "result": "swapped@2",
+    "slots": [
+     "00000000-0000-0000-0000-000000000001:pending",
+     "00000000-0000-0000-0000-000000000002:pending",
+     "00000000-0000-0000-0000-000000000010:pending",
+     "00000000-0000-0000-0000-000000000004:pending",
+     "00000000-0000-0000-0000-000000000005:pending"
+    ],
+    "backlog": [
+     "00000000-0000-0000-0000-000000000003:2:normal:open"
+    ]
+   }
+  }
+ ]
+}

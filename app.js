@@ -1,9 +1,9 @@
 // SoaringHigh-5 PWA: today's 5 slots + TODO list + Settings, stored locally (offline-first) and synced through Google Drive.
 import { GOOGLE_CLIENT_ID } from './config.js';
-import { CATEGORY_COUNT, URGENCIES, stamp, toPlanner, parseDocument } from './merge.js';
+import { CATEGORY_COUNT, URGENCIES, normalizeSlotOrder, stamp, toPlanner, parseDocument } from './merge.js';
 import {
   MAX_TEXT_LENGTH, addBacklog, addToFreeSlot, addToSlot, backlogByCategory, backlogByUrgency, completeBacklog, currentInSlot, deleteBacklog, deleteSlotTask, emptyPlanner,
-  ensureRollover, isSlotFree, localDay, sendToToday, setSlotStatus, todayTaskFor, updateBacklog, updateSlotTask,
+  ensureRollover, isSlotFree, localDay, moveSlotRow, sendToToday, setSlotStatus, todayTaskFor, updateBacklog, updateSlotTask,
 } from './planner.js';
 import { GoogleAuth, DriveStore } from './sync.js';
 import { syncOnce } from './engine.js';
@@ -13,6 +13,7 @@ import { APP_NAME, PWA_VERSION } from './app-info.js';
 import { adoptSyncedCategoryNames, categoryColor, categoryNamesForSync, customCategoryName, loadSettings, saveSettings } from './settings.js';
 import { renderSettings } from './settings-view.js';
 import { $, button, el, tappable } from './dom.js';
+import { enableLongPressReorder } from './reorder.js';
 
 const KEY = { planner: 'sh5.planner', snapshot: 'sh5.snapshot', device: 'sh5.deviceId', lastSync: 'sh5.lastSync', connected: 'sh5.connected' };
 const CHANGE_DEBOUNCE_MS = 5000;
@@ -257,7 +258,7 @@ function confirmDelete(text, remove) {
 function renderSlots() {
   const today = localDay();
   refreshAddForm('today', t().placeholder, busyFor(null));
-  $('slots').replaceChildren(...state.planner.slotOrder.map((slot) => {
+  $('slots').replaceChildren(...normalizeSlotOrder(state.planner.slotOrder).map((slot) => {
     const task = currentInSlot(state.planner, slot, today);
     if (task?.status === 'pending' && editing.is('task', task.id)) return editorRow(taskEditor(task, busyFor(task.slot)));
     if (task?.status === 'pending') return pendingTaskRow(task);
@@ -303,11 +304,17 @@ function newTaskEditor(slot, busyCategory) {
 function taskEditor(task, busyCategory) {
   return editorForm({ text: task.text, category: task.slot, urgency: task.urgency, placeholder: t().placeholder, saveLabel: t().save, busyCategory,
     onSave: (text, category, urgency) => updateSlotTask(state.planner, task.id, text, urgency, category),
-    onDelete: () => confirmDelete(task.text, () => deleteSlotTask(state.planner, task.id)) });
+    onDelete: () => confirmDelete(task.text, () => deleteSlotTask(state.planner, task.id, localDay())) });
+}
+
+/** HOY long-press drag: the slot shown at row `from` moves to row `to` (synced like the desktop's slot order). */
+function moveSlotToRow(from, to) {
+  const slot = normalizeSlotOrder(state.planner.slotOrder)[from];
+  if (moveSlotRow(state.planner, slot, to)) persist();
 }
 
 function markStatus(id, status) {
-  setSlotStatus(state.planner, id, status);
+  setSlotStatus(state.planner, id, status, localDay());
   persist();
 }
 
@@ -344,8 +351,8 @@ function itemEditor(item) {
 
 function sendItemToToday(item) {
   const { result, slot } = sendToToday(state.planner, item.id, localDay());
-  if (result !== 'sent') { showResult(result); return; }
-  showNotice(format(t().sent, categoryName(slot)));
+  if (result !== 'moved' && result !== 'swapped') { showResult(result); return; }
+  showNotice(format(result === 'swapped' ? t().swapped : t().sent, categoryName(slot)));
   persist();
 }
 
@@ -381,7 +388,7 @@ function addTaskToToday(text, category, urgency) {
   return result;
 }
 
-/** Planner refusals as a short notice ('empty', 'slotBusy', 'noFreeSlot', 'alreadyToday'); a task or item that
+/** Planner refusals as a short notice ('empty', 'slotBusy', 'noFreeSlot', 'alreadyThere'); a task or item that
  * vanished meanwhile (sync, day change) just closes the editor. */
 function showResult(result) {
   if (result === 'notFound') { editing.none(); render(); return; }
@@ -440,6 +447,7 @@ for (const tab of TABS) $(`tab-${tab}`).addEventListener('click', () => showView
 $('settings').addEventListener('click', () => showView(state.view === 'settings' ? 'today' : 'settings'));
 $('sync-status').addEventListener('click', () => showView('settings'));
 buildAddForm('today', addTaskToToday);
+enableLongPressReorder($('slots'), { rowSelector: 'li.task-row', canStart: () => !state.editing, onDrop: moveSlotToRow });
 buildAddForm('todo', (text, category, urgency) => addBacklog(state.planner, text, category, urgency));
 window.addEventListener('online', () => scheduleSync(1000));
 document.addEventListener('visibilitychange', () => {
