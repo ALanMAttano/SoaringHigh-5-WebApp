@@ -2,7 +2,7 @@
 import { GOOGLE_CLIENT_ID } from './config.js';
 import { CATEGORY_COUNT, URGENCIES, stamp, toPlanner, parseDocument } from './merge.js';
 import {
-  MAX_TEXT_LENGTH, addBacklog, addToSlot, backlogByUrgency, openBacklog, completeBacklog, currentInSlot, deleteBacklog, deleteSlotTask, emptyPlanner,
+  MAX_TEXT_LENGTH, addBacklog, addToFreeSlot, addToSlot, backlogByCategory, backlogByUrgency, completeBacklog, currentInSlot, deleteBacklog, deleteSlotTask, emptyPlanner,
   ensureRollover, isSlotFree, localDay, sendToToday, setSlotStatus, todayTaskFor, updateBacklog, updateSlotTask,
 } from './planner.js';
 import { GoogleAuth, DriveStore } from './sync.js';
@@ -256,28 +256,43 @@ function confirmDelete(text, remove) {
 
 function renderSlots() {
   const today = localDay();
-  const busyFor = (own) => (slot) => slot !== own && !isSlotFree(state.planner, slot, today);
+  refreshAddForm('today', t().placeholder, busyFor(null));
   $('slots').replaceChildren(...state.planner.slotOrder.map((slot) => {
     const task = currentInSlot(state.planner, slot, today);
-    const li = el('li', {}, categoryLabel(slot));
-    if (task?.status === 'pending' && editing.is('task', task.id)) li.append(taskEditor(task, busyFor(task.slot)));
-    else if (task?.status === 'pending') li.append(...pendingTaskRow(task));
-    else if (editing.is('slot', slot)) li.append(newTaskEditor(slot, busyFor(slot)));
-    else li.append(...freeSlotRow(slot, task));
-    return li;
+    if (task?.status === 'pending' && editing.is('task', task.id)) return editorRow(taskEditor(task, busyFor(task.slot)));
+    if (task?.status === 'pending') return pendingTaskRow(task);
+    if (editing.is('slot', slot)) return editorRow(newTaskEditor(slot, busyFor(slot)));
+    return freeSlotRow(slot, task);
   }));
 }
 
+/** Category picker rule: slots with a pending task today are disabled, except the task's own. */
+const busyFor = (own) => (slot) => slot !== own && !isSlotFree(state.planner, slot, localDay());
+
+/**
+ * One task row, same markup everywhere: category, urgency pill, actions and the text. CSS places them: portrait =
+ * category · urgency · actions on top and the text below at full width; landscape = one line.
+ */
+function taskRow({ category, text, textClass = '', urgency = null, onTap, actions = [] }) {
+  return el('li', { className: 'task-row' }, categoryLabel(category),
+    urgency ? urgencyPill(urgency) : el('span', { className: 'pill-space' }),
+    el('div', { className: 'actions' }, ...actions),
+    tappable(el('span', { className: `text ${textClass}`.trim(), textContent: text }), onTap));
+}
+
+const editorRow = (editor) => el('li', { className: 'editor-row-item' }, editor);
+
 function pendingTaskRow(task) {
-  return [tappable(el('span', { className: 'text', textContent: task.text }), () => editing.open('task', task.id)),
-    urgencyPill(task.urgency), button(t().done, () => markStatus(task.id, 'done'))];
+  return taskRow({ category: task.slot, text: task.text, urgency: task.urgency, onTap: () => editing.open('task', task.id),
+    actions: [button(t().done, () => markStatus(task.id, 'done'))] });
 }
 
 /** A free slot: empty, or holding today's finished task (tap to add a new one, UNDO to reopen). */
 function freeSlotRow(slot, finished) {
   const add = () => editing.open('slot', slot);
-  if (!finished) return [tappable(el('span', { className: 'text empty', textContent: t().emptySlot }), add)];
-  return [tappable(el('span', { className: 'text finished', textContent: finished.text }), add), button(t().undo, () => markStatus(finished.id, 'pending'))];
+  if (!finished) return taskRow({ category: slot, text: t().emptySlot, textClass: 'empty', onTap: add });
+  return taskRow({ category: slot, text: finished.text, textClass: 'finished', urgency: finished.urgency, onTap: add,
+    actions: [button(t().undo, () => markStatus(finished.id, 'pending'))] });
 }
 
 function newTaskEditor(slot, busyCategory) {
@@ -296,37 +311,29 @@ function markStatus(id, status) {
   persist();
 }
 
-// --- TODO: grouped by urgency
+// --- TODO (grouped by category) and URGENCY (grouped by urgency)
 
 function renderTodo() {
-  $('todo-text').placeholder = t().todoPlaceholder;
-  $('todo-add').textContent = t().add;
-  const chosen = Number($('todo-category').value || 0);
-  $('todo-category').replaceWith(categorySelect('todo-category', chosen));
-  $('todo-urgency').replaceWith(urgencySelect('todo-urgency', $('todo-urgency').value || 'normal'));
-  const rows = state.view === 'urgency' ? urgencyGroupRows() : openBacklog(state.planner).map((item) => itemRow(item, { showUrgency: true }));
+  refreshAddForm('todo', t().todoPlaceholder);
+  const groups = state.view === 'urgency'
+    ? backlogByUrgency(state.planner).map(({ urgency, items }) => ({ title: t().urgencyGroup[urgency], color: URGENCY_COLORS[urgency], items }))
+    : backlogByCategory(state.planner).map(({ category, items }) => ({ title: categoryName(category), color: categoryColor(state.settings, category), items }));
+  const rows = groups.flatMap(groupRows);
   $('todo-list').replaceChildren(...(rows.length ? rows : [el('li', {}, el('span', { className: 'text empty', textContent: t().noTodo }))]));
 }
 
-/** URGENCY tab: a coloured heading per urgency level (most urgent first), then its items. */
-function urgencyGroupRows() {
-  return backlogByUrgency(state.planner).flatMap(({ urgency, items }) => {
-    const heading = el('li', { className: 'group', textContent: `${t().urgencyGroup[urgency]} · ${items.length}` });
-    heading.style.color = URGENCY_COLORS[urgency];
-    return [heading, ...items.map((item) => itemRow(item, { showUrgency: false }))];
-  });
+/** A coloured heading with the count, then the group's items. */
+function groupRows({ title, color, items }) {
+  const heading = el('li', { className: 'group', textContent: `${title} · ${items.length}` });
+  heading.style.color = color;
+  return [heading, ...items.map((item) => (editing.is('item', item.id) ? editorRow(itemEditor(item)) : itemRow(item)))];
 }
 
-function itemRow(item, { showUrgency }) {
-  return el('li', {}, ...(editing.is('item', item.id) ? [itemEditor(item)] : todoRow(item, showUrgency)));
-}
-
-function todoRow(item, showUrgency) {
+function itemRow(item) {
   const inToday = todayTaskFor(state.planner, item.id, localDay());
-  const text = el('span', { className: 'text' }, item.text, showUrgency ? el('span', { className: 'under' }, urgencyPill(item.urgency)) : null);
-  return [categoryLabel(item.category), tappable(text, () => editing.open('item', item.id)),
-    inToday ? el('span', { className: 'tag', textContent: t().inToday }) : button(t().toToday, () => sendItemToToday(item)),
-    button(t().done, () => { completeBacklog(state.planner, item.id, localDay()); persist(); })];
+  return taskRow({ category: item.category, text: item.text, urgency: item.urgency, onTap: () => editing.open('item', item.id),
+    actions: [inToday ? el('span', { className: 'tag', textContent: t().inToday }) : button(t().toToday, () => sendItemToToday(item)),
+      button(t().done, () => { completeBacklog(state.planner, item.id, localDay()); persist(); })] });
 }
 
 function itemEditor(item) {
@@ -342,12 +349,36 @@ function sendItemToToday(item) {
   persist();
 }
 
-function addTodoFromForm(e) {
-  e.preventDefault();
-  const result = addBacklog(state.planner, $('todo-text').value, Number($('todo-category').value), $('todo-urgency').value);
-  if (result !== 'added') { showResult(result); return; }
-  $('todo-text').value = '';
-  persist();
+// --- add forms (HOY and the TODO tabs): built once, refreshed in place so typed text survives re-renders
+
+function buildAddForm(prefix, onAdd) {
+  const form = $(`${prefix}-form`);
+  form.append(el('input', { id: `${prefix}-text`, maxLength: MAX_TEXT_LENGTH, autocomplete: 'off', enterKeyHint: 'done' }),
+    el('select', { id: `${prefix}-category` }), el('select', { id: `${prefix}-urgency` }),
+    el('button', { className: 'btn primary', type: 'submit', id: `${prefix}-add` }));
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const result = onAdd($(`${prefix}-text`).value, Number($(`${prefix}-category`).value), $(`${prefix}-urgency`).value);
+    if (result !== 'added') { showResult(result); return; }
+    $(`${prefix}-text`).value = '';
+    persist();
+  });
+}
+
+function refreshAddForm(prefix, placeholder, busyCategory) {
+  $(`${prefix}-text`).placeholder = placeholder;
+  $(`${prefix}-add`).textContent = t().add;
+  const category = $(`${prefix}-category`), urgency = $(`${prefix}-urgency`);
+  const free = busyCategory ? [0, 1, 2, 3, 4].find((i) => !busyCategory(i)) ?? 0 : 0;
+  const chosen = category.value === '' || (busyCategory && busyCategory(Number(category.value))) ? free : Number(category.value);
+  category.replaceWith(categorySelect(category.id, chosen, busyCategory));
+  urgency.replaceWith(urgencySelect(urgency.id, urgency.value || 'normal'));
+}
+
+function addTaskToToday(text, category, urgency) {
+  const { result, slot } = addToFreeSlot(state.planner, text, urgency, localDay(), category);
+  if (result === 'added' && slot !== category) showNotice(format(t().sent, categoryName(slot)));
+  return result;
 }
 
 /** Planner refusals as a short notice ('empty', 'slotBusy', 'noFreeSlot', 'alreadyToday'); a task or item that
@@ -408,7 +439,8 @@ function showNotice(text) {
 for (const tab of TABS) $(`tab-${tab}`).addEventListener('click', () => showView(tab));
 $('settings').addEventListener('click', () => showView(state.view === 'settings' ? 'today' : 'settings'));
 $('sync-status').addEventListener('click', () => showView('settings'));
-$('todo-form').addEventListener('submit', addTodoFromForm);
+buildAddForm('today', addTaskToToday);
+buildAddForm('todo', (text, category, urgency) => addBacklog(state.planner, text, category, urgency));
 window.addEventListener('online', () => scheduleSync(1000));
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;

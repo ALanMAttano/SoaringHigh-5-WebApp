@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { merge, stamp, toPlanner } from '../merge.js';
 import {
-  addBacklog, addToSlot, backlogByUrgency, completeBacklog, openBacklog, deleteBacklog, deleteSlotTask, emptyPlanner, freeSlots,
+  addBacklog, addToFreeSlot, addToSlot, backlogByCategory, backlogByUrgency, completeBacklog, openBacklog, deleteBacklog, deleteSlotTask, emptyPlanner, freeSlots,
   sendToToday, setSlotStatus, todayTaskFor, updateBacklog, updateSlotTask,
 } from '../planner.js';
 
@@ -161,4 +161,27 @@ test('TODO tab: all open items in creation order, whatever their urgency or cate
   updateBacklog(p, 'id-1', 'first!', 2, 'urgent', DAY); // editing does not move it
   completeBacklog(p, 'id-3', DAY);
   assert.deepEqual(openBacklog(p).map((b) => b.text), ['first!', 'second']);
+});
+
+test('HOY add form: chosen category when free, else the first free slot, refused when all 5 are full', () => {
+  const p = emptyPlanner();
+  const id = ids();
+  assert.deepEqual(addToFreeSlot(p, 'bank', 'urgent', DAY, 2, id), { result: 'added', slot: 2 });
+  assert.deepEqual(addToFreeSlot(p, 'gym', 'normal', DAY, 2, id), { result: 'added', slot: 0 });
+  assert.deepEqual(addToFreeSlot(p, '  ', 'normal', DAY, 1, id), { result: 'empty' });
+  const full = fullDay();
+  assert.deepEqual(addToFreeSlot(full, 'sixth', 'normal', DAY, 0), { result: 'noFreeSlot' });
+  assert.equal(full.slotTasks.length, 5);
+});
+
+test('TODO tab grouped by category in slot order, saved order inside a group, open items only', () => {
+  const p = emptyPlanner();
+  p.slotOrder = [3, 0, 1, 2, 4];
+  const id = ids();
+  addBacklog(p, 'a0', 0, 'wish', id);
+  addBacklog(p, 'b3', 3, 'normal', id);
+  addBacklog(p, 'c0', 0, 'urgentImportant', id);
+  addBacklog(p, 'gone', 1, 'normal', id);
+  completeBacklog(p, 'id-4', DAY);
+  assert.deepEqual(backlogByCategory(p).map((g) => [g.category, g.items.map((b) => b.text)]), [[3, ['b3']], [0, ['a0', 'c0']]]);
 });

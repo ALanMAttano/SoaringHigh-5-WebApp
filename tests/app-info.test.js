@@ -22,3 +22,8 @@ test('every module the app imports is in the offline app shell', () => {
   }
   for (const m of modules) assert.ok(sw.includes(`'${m}'`), `${m} missing from SHELL in sw.js`);
 });
+
+test('the installed app follows the phone rotation (no locked portrait)', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));
+  assert.equal(manifest.orientation, 'any');
+});

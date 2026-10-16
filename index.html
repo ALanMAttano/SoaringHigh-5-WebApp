@@ -25,14 +25,12 @@
   </nav>
   <main>
     <p id="notice" class="notice" hidden></p>
-    <section id="view-today"><ul id="slots" class="list"></ul></section>
+    <section id="view-today">
+      <form id="today-form" class="row-form"></form>
+      <ul id="slots" class="list"></ul>
+    </section>
     <section id="view-todo" hidden>
-      <form id="todo-form" class="row-form">
-        <input id="todo-text" maxlength="200" autocomplete="off">
-        <select id="todo-category"></select>
-        <select id="todo-urgency"></select>
-        <button class="btn primary" type="submit" id="todo-add"></button>
-      </form>
+      <form id="todo-form" class="row-form"></form>
       <ul id="todo-list" class="list"></ul>
     </section>
     <section id="view-settings" class="settings" hidden></section>
@@ -40,7 +38,7 @@
   </main>
   <footer>
     <div id="sync-status" class="status tappable"></div>
-    <div id="version" class="version">SoaringHigh-5 PWA v2.29</div>
+    <div id="version" class="version">SoaringHigh-5 PWA v2.30</div>
   </footer>
 </body>
 </html>

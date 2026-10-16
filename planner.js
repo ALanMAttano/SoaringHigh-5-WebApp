@@ -45,6 +45,18 @@ export function addToSlot(p, slot, text, urgency, day, newId = () => crypto.rand
   return 'added';
 }
 
+/**
+ * HOY add form: a new task in the chosen category's slot when free, else the first free slot (the 5-task limit
+ * holds). Returns { result: 'added' | 'empty' | 'noFreeSlot' | 'invalidCategory', slot? }.
+ */
+export function addToFreeSlot(p, text, urgency, day, preferred, newId = () => crypto.randomUUID()) {
+  if (!cleanText(text)) return { result: 'empty' };
+  const free = freeSlots(p, day);
+  if (!free.length) return { result: 'noFreeSlot' };
+  const slot = free.includes(preferred) ? preferred : free[0];
+  return { result: addToSlot(p, slot, text, urgency, day, newId), slot };
+}
+
 /** Puts a task into its (free) slot, replacing a finished one there. */
 function placeInSlot(p, task) {
   const previous = currentInSlot(p, task.slot, task.date);
@@ -170,6 +182,13 @@ export function deleteBacklog(p, id) {
 
 /** Open TODO items in creation order (the order they were added to the list). */
 export const openBacklog = (p) => p.backlog.filter((b) => b.status === 'open');
+
+/** Open TODO items grouped by category (in the user's slot order), saved order inside a group; empty groups left out. */
+export function backlogByCategory(p) {
+  return normalizeSlotOrder(p.slotOrder).map((category) => ({ category,
+    items: openBacklog(p).filter((b) => b.category === category).sort((a, b) => (a.categoryOrder ?? 0) - (b.categoryOrder ?? 0)) }))
+    .filter((g) => g.items.length);
+}
 
 /** Open TODO items grouped by urgency, most urgent first; inside a group in saved order. Empty groups are left out. */
 export function backlogByUrgency(p) {

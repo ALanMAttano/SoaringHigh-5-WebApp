@@ -74,5 +74,17 @@ input, select { min-height: 44px; }
 a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 .note { color: var(--dim); font-size: 13px; margin: 4px 0 0; }
 .credit { color: var(--done); font-size: 12px; margin: 14px 0 0; }
-.tappable.text:has(.under) { flex-direction: column; align-items: flex-start; gap: 4px; }
-.under { display: block; }
+/* Task rows (all tabs). Portrait: category · urgency · actions on top, the text below at full width. */
+.list li.task-row { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "cat pill actions" "text text text";
+  align-items: center; gap: 6px 10px; }
+.task-row .cat { grid-area: cat; width: auto; }
+.task-row .pill, .task-row .pill-space { grid-area: pill; justify-self: start; }
+.task-row .actions { grid-area: actions; display: flex; gap: 8px; align-items: center; }
+.task-row .text { grid-area: text; }
+.task-row .btn { min-height: 40px; padding: 6px 12px; }
+/* Landscape (phone rotated): wider page, one line per task. */
+@media (orientation: landscape) {
+  body { max-width: 980px; }
+  .list li.task-row { grid-template-columns: 96px 1fr auto auto; grid-template-areas: "cat text pill actions"; }
+  .task-row .cat { width: 96px; }
+}
