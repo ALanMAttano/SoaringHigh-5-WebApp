@@ -412,7 +412,6 @@ function syncInfo() {
   return {
     connected: isConnected(), configured: auth.configured, busy: state.syncing, statusText: statusText(last),
     lastSyncText: last ? new Date(last).toLocaleString(t().locale, { dateStyle: 'short', timeStyle: 'short' }) : null,
-    conflicts: snapshot()?.conflicts?.length ?? 0,
   };
 }
 
@@ -423,7 +422,7 @@ function renderSyncInfo() {
 
 function renderFooter() {
   const info = syncInfo();
-  $('sync-status').textContent = info.statusText + (info.connected && info.conflicts ? ` · ${format(t().conflicts, info.conflicts)}` : '');
+  $('sync-status').textContent = info.statusText;
   $('version').textContent = `${APP_NAME} ${PWA_VERSION}`;
 }
 
