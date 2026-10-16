@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { merge, stamp, toPlanner } from '../merge.js';
 import {
   addBacklog, addToFreeSlot, addToSlot, backlogByCategory, backlogByUrgency, completeBacklog, openBacklog, deleteBacklog, deleteSlotTask, emptyPlanner, freeSlots,
-  currentInSlot, leastImportantPending, moveSlotRow, sendToToday, setSlotStatus, updateBacklog, updateSlotTask,
+  currentInSlot, moveSlotRow, outranks, sendToToday, setSlotStatus, updateBacklog, updateSlotTask,
 } from '../planner.js';
 
 const DAY = '2026-10-16';
@@ -106,48 +106,46 @@ test('-> HOY moves the item out of TODO into its own slot, keeping its id', () =
   assert.deepEqual(sendToToday(p, 'item', DAY), { result: 'notFound' });
 });
 
-test('-> HOY with its slot busy uses the first free slot', () => {
+test('-> HOY into a busy own slot: a more urgent item swaps; the displaced task returns to TODO', () => {
   const p = emptyPlanner();
   addToSlot(p, 3, 'busy', 'normal', DAY, () => 't0');
-  addBacklog(p, 'gym', 3, 'normal', () => 'item');
-  assert.deepEqual(sendToToday(p, 'item', DAY), { result: 'moved', slot: 0 });
+  addBacklog(p, 'gym', 3, 'urgent', () => 'item');
+  assert.deepEqual(sendToToday(p, 'item', DAY), { result: 'swapped', slot: 3 });
+  assert.equal(currentInSlot(p, 3, DAY).id, 'item');
+  assert.deepEqual(p.backlog.map((b) => [b.id, b.category, b.urgency, b.status]), [['t0', 3, 'normal', 'open']]);
 });
 
-test('-> HOY with all five busy: the least important task (tie: oldest) goes back to TODO', () => {
-  const p = fullDay(); // all 'normal': tie, so the oldest (id-1, slot 0) makes room
-  addBacklog(p, 'extra', 2, 'urgent', () => 'item');
-  assert.deepEqual(sendToToday(p, 'item', DAY), { result: 'swapped', slot: 0 });
-  assert.equal(currentInSlot(p, 0, DAY).id, 'item');
-  assert.deepEqual(p.backlog.map((b) => [b.id, b.category, b.urgency, b.status]), [['id-1', 0, 'normal', 'open']]);
-  assert.equal(p.slotTasks.length, 5);
-});
-
-test('least important pending: lowest urgency wins over age; finished tasks never count', () => {
-  const p = fullDay();
-  p.slotTasks[3].urgency = 'wish';
-  assert.equal(leastImportantPending(p, DAY).id, 'id-4');
-  p.slotTasks[3].status = 'done';
-  assert.equal(leastImportantPending(p, DAY).id, 'id-1');
-});
-
-test('a dropped (preferred) slot is used when free; when busy a free slot is used instead', () => {
+test('-> HOY tie: the older task (already in the slot) goes back to TODO', () => {
   const p = emptyPlanner();
-  addToSlot(p, 4, 'busy', 'wish', DAY, () => 't4');
-  addBacklog(p, 'a', 1, 'normal', () => 'a');
-  addBacklog(p, 'b', 1, 'normal', () => 'b');
-  assert.deepEqual(sendToToday(p, 'a', DAY, 3), { result: 'moved', slot: 3 });
-  assert.deepEqual(sendToToday(p, 'b', DAY, 4), { result: 'moved', slot: 1 });
+  addToSlot(p, 1, 'busy', 'important', DAY, () => 't0');
+  addBacklog(p, 'new', 1, 'important', () => 'item');
+  assert.deepEqual(sendToToday(p, 'item', DAY), { result: 'swapped', slot: 1 });
+  assert.deepEqual(p.backlog.map((b) => b.id), ['t0']);
+});
+
+test('-> HOY less important than the current task: stays in TODO, nothing changes; other free slots are not used', () => {
+  const p = emptyPlanner();
+  addToSlot(p, 2, 'busy', 'urgent', DAY, () => 't0');
+  addBacklog(p, 'later', 2, 'wish', () => 'item');
+  const before = JSON.stringify(p);
+  assert.deepEqual(sendToToday(p, 'item', DAY), { result: 'outranked', slot: 2 });
+  assert.equal(JSON.stringify(p), before);
+});
+
+test('outranks: incoming wins when at least as urgent', () => {
+  assert.ok(outranks('urgent', 'normal'));
+  assert.ok(outranks('normal', 'normal'));
+  assert.equal(outranks('wish', 'important'), false);
 });
 
 test('sendToToday refusals', () => {
   const p = emptyPlanner();
   addBacklog(p, 'x', 0, 'normal', () => 'item');
-  assert.deepEqual(sendToToday(p, 'item', DAY, 7), { result: 'invalidSlot' });
   assert.deepEqual(sendToToday(p, 'nope', DAY), { result: 'notFound' });
   legacyLink(p, 'item', 0);
-  assert.deepEqual(sendToToday(p, 'item', DAY, 0), { result: 'alreadyThere' });
+  assert.deepEqual(sendToToday(p, 'item', DAY), { result: 'alreadyThere' });
   completeBacklog(p, 'item', DAY);
-  assert.deepEqual(sendToToday(p, 'item', DAY, 1), { result: 'notOpen' });
+  assert.deepEqual(sendToToday(p, 'item', DAY), { result: 'notOpen' });
 });
 
 test('a moved TODO item syncs as one task and a tombstoned item, never a duplicate', () => {

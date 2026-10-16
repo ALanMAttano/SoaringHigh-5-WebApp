@@ -351,8 +351,10 @@ function itemEditor(item) {
 
 function sendItemToToday(item) {
   const { result, slot } = sendToToday(state.planner, item.id, localDay());
-  if (result !== 'moved' && result !== 'swapped') { showResult(result); return; }
-  showNotice(format(result === 'swapped' ? t().swapped : t().sent, categoryName(slot)));
+  const message = { moved: t().sent, swapped: t().swapped, outranked: t().outranked }[result];
+  if (!message) { showResult(result); return; }
+  showNotice(format(message, categoryName(slot)));
+  if (result === 'outranked') return;
   persist();
 }
 

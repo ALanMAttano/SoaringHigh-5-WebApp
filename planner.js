@@ -1,8 +1,8 @@
 // Planner rules for the PWA, mirroring src/SoaringHigh5.Core/Planner.cs: five slots (one per category), one task
 // per slot and day, TODO list grouped by category/urgency, day change carries pending tasks over. Pure functions on
 // plain data (no DOM); sync stamps (updatedAt) are added by merge.stamp() from the diff, so edits here sync as usual.
-// Moving a TODO item to today takes it OUT of the list (the task keeps the item's id; with all 5 busy the least
-// important pending task goes back to TODO); deleting today's task auto-fills the slot with the most urgent open item
+// Moving a TODO item to today takes it OUT of the list into its own category's slot (the task keeps the item's id;
+// the less important of it and the pending task there stays in / goes back to TODO); deleting today's task auto-fills the slot with the most urgent open item
 // of that category (done does not).
 // tests/today-fixtures.json is checked by both the node and the C# tests (parity).
 import { CATEGORY_COUNT, URGENCIES, normalizeSlotOrder } from './merge.js';
@@ -221,44 +221,30 @@ export function backlogByUrgency(p) {
     .filter((g) => g.items.length);
 }
 
+/** The incoming item wins its slot when it is at least as urgent as the pending task there: on a tie the task
+ * already in the slot is the older one, so it goes back (desktop Planner.Outranks). */
+export const outranks = (incoming, current) => URGENCIES.indexOf(incoming) <= URGENCIES.indexOf(current);
+
 /**
- * Moves an open TODO item into today's 5 (desktop Planner.Assign / SendToToday): the item leaves the TODO list and the
- * task takes its id, so sync sees one task, never a copy. It lands in `preferred` if free, else its own category's
- * slot, else the first free slot; with all 5 busy the least important pending task goes back to TODO (own id,
- * category = slot, urgency) and the item takes its slot.
- * Returns { result: 'moved' | 'swapped' | 'alreadyThere' | 'notOpen' | 'notFound' | 'invalidSlot', slot? }.
+ * The -> HOY button (desktop Planner.SendToToday): the item goes to its OWN category's slot and leaves the TODO list;
+ * the task takes its id, so sync sees one task, never a copy. A pending task there that is less important (or equally
+ * important, hence older) goes back to TODO with its id, category and urgency; a more important one keeps the slot.
+ * Returns { result: 'moved' | 'swapped' | 'outranked' | 'alreadyThere' | 'notOpen' | 'notFound', slot? }.
  */
-export function sendToToday(p, itemId, day, preferred = null) {
-  if (preferred !== null && !isValidSlot(preferred)) return { result: 'invalidSlot' };
+export function sendToToday(p, itemId, day) {
   const item = p.backlog.find((b) => b.id === itemId);
   if (!item) return { result: 'notFound' };
   if (item.status !== 'open') return { result: 'notOpen' };
-  const atPreferred = preferred === null ? null : currentInSlot(p, preferred, day);
-  if (atPreferred?.status === 'pending' && atPreferred.backlogId === itemId) return { result: 'alreadyThere' };
+  const slot = item.category;
+  const current = currentInSlot(p, slot, day);
+  const busy = current?.status === 'pending';
+  if (busy && current.backlogId === itemId) return { result: 'alreadyThere' };
+  if (busy && !outranks(item.urgency, current.urgency)) return { result: 'outranked', slot };
   const legacyCopy = todayTaskFor(p, itemId, day); // linked copy made by v2.31 or older
   if (legacyCopy) remove(p.slotTasks, legacyCopy);
-  const slot = targetSlotFor(p, item, preferred, day);
-  const displaced = currentInSlot(p, slot, day);
-  const swapped = displaced?.status === 'pending';
-  if (swapped) returnToBacklog(p, displaced);
+  if (busy) returnToBacklog(p, current);
   moveIntoSlot(p, item, slot, day);
-  return { result: swapped ? 'swapped' : 'moved', slot };
-}
-
-/** Where a TODO item moving into today lands (desktop Planner.TargetSlotFor). */
-export function targetSlotFor(p, item, preferred, day) {
-  if (preferred !== null && isSlotFree(p, preferred, day)) return preferred;
-  if (isSlotFree(p, item.category, day)) return item.category;
-  return freeSlots(p, day)[0] ?? leastImportantPending(p, day)?.slot ?? item.category;
-}
-
-/** Today's pending task that makes room when all 5 are busy: lowest urgency; ties: the oldest = earliest in the
- * stored task list (tasks are appended when created; carry-over keeps the place). Desktop LeastImportantPending. */
-export function leastImportantPending(p, day) {
-  return p.slotTasks.map((t, index) => ({ t, index }))
-    .filter(({ t }) => t.status === 'pending' && isTodaysCurrent(p, t, day))
-    .sort((a, b) => URGENCIES.indexOf(b.t.urgency) - URGENCIES.indexOf(a.t.urgency) || a.index - b.index)
-    .map(({ t }) => t)[0] ?? null;
+  return { result: busy ? 'swapped' : 'moved', slot };
 }
 
 /** Takes the item out of the TODO list and makes it today's task in the slot, with the item's id. */

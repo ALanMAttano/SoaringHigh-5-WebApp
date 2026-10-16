@@ -12,7 +12,7 @@ function run(p, op) {
     case 'done': return String(setSlotStatus(p, op.id, 'done'));
     case 'cancel': return String(setSlotStatus(p, op.id, 'cancelled'));
     case 'delete': return String(deleteSlotTask(p, op.id, day));
-    default: { const r = sendToToday(p, op.id, day, op.slot ?? null); return `${r.result}@${r.slot}`; }
+    default: { const r = sendToToday(p, op.id, day); return `${r.result}@${r.slot}`; }
   }
 }
 
