@@ -5,7 +5,7 @@ import { APP_NAME, AUTHOR, PWA_VERSION, RELEASES_URL } from './app-info.js';
 import { CATEGORY_COUNT } from './merge.js';
 import { MAX_CATEGORY_NAME_LENGTH, categoryColor, customCategoryName, renameCategory, setCategoryColor } from './settings.js';
 import { button, el } from './dom.js';
-import { format } from './i18n.js';
+import { LANGUAGES, LANGUAGE_ABBREVIATIONS, format } from './i18n.js';
 
 /**
  * ctx: { t, settings, update(next, { rerender, sync }), previewTuning(hue, saturation), sync: { connected, configured,
@@ -28,7 +28,7 @@ const row = (label, ...controls) => el('div', { className: 'settings-row' },
 
 function appearanceRows(ctx) {
   const { t, settings } = ctx;
-  const languages = [[null, t.languageAuto], ['es', 'Español'], ['en', 'English'], ['it', 'Italiano']];
+  const languages = [[null, t.languageAuto], ...LANGUAGES.map((code) => [code, LANGUAGE_ABBREVIATIONS[code]])];
   const tabs = el('div', { className: 'choice' }, ...languages.map(([code, name]) =>
     button(name, () => ctx.update({ ...settings, language: code }), 'tab' + (settings.language === code ? ' active' : ''))));
   const hue = slider('hue', HUE_MIN, HUE_MAX, settings.hue, (v) => `${v > 0 ? '+' : ''}${v}°`);

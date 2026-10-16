@@ -168,10 +168,13 @@ export function deleteBacklog(p, id) {
   return true;
 }
 
+/** Open TODO items in creation order (the order they were added to the list). */
+export const openBacklog = (p) => p.backlog.filter((b) => b.status === 'open');
+
 /** Open TODO items grouped by urgency, most urgent first; inside a group in saved order. Empty groups are left out. */
 export function backlogByUrgency(p) {
   return URGENCIES.map((urgency) => ({ urgency,
-    items: p.backlog.filter((b) => b.status === 'open' && b.urgency === urgency).sort((a, b) => (a.urgencyOrder ?? 0) - (b.urgencyOrder ?? 0)) }))
+    items: openBacklog(p).filter((b) => b.urgency === urgency).sort((a, b) => (a.urgencyOrder ?? 0) - (b.urgencyOrder ?? 0)) }))
     .filter((g) => g.items.length);
 }
 

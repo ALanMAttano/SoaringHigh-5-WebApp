@@ -2,7 +2,7 @@
 import { GOOGLE_CLIENT_ID } from './config.js';
 import { CATEGORY_COUNT, URGENCIES, stamp, toPlanner, parseDocument } from './merge.js';
 import {
-  MAX_TEXT_LENGTH, addBacklog, addToSlot, backlogByUrgency, completeBacklog, currentInSlot, deleteBacklog, deleteSlotTask, emptyPlanner,
+  MAX_TEXT_LENGTH, addBacklog, addToSlot, backlogByUrgency, openBacklog, completeBacklog, currentInSlot, deleteBacklog, deleteSlotTask, emptyPlanner,
   ensureRollover, isSlotFree, localDay, sendToToday, setSlotStatus, todayTaskFor, updateBacklog, updateSlotTask,
 } from './planner.js';
 import { GoogleAuth, DriveStore } from './sync.js';
@@ -20,7 +20,9 @@ const PERIODIC_MS = 5 * 60 * 1000;
 const DAY_CHECK_MS = 60 * 1000;
 const URGENCY_COLORS = { urgentImportant: '#FF003C', urgent: '#FF7A1A', important: '#FFC400', normal: '#3DBA5A', wish: '#8FA8FF' };
 
-const VIEWS = ['today', 'todo', 'settings'];
+const TABS = ['today', 'todo', 'urgency'];
+/** Screens; both TODO tabs show the TODO section (same add form), as a flat list or grouped by urgency. */
+const SECTION_OF = { today: 'today', todo: 'todo', urgency: 'todo', settings: 'settings' };
 const load = (k, fallback) => { try { return JSON.parse(localStorage.getItem(k)) ?? fallback; } catch { return fallback; } };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
@@ -172,10 +174,10 @@ function renderMain() {
 }
 
 function renderTabs() {
-  for (const view of VIEWS) $(`view-${view}`).hidden = state.view !== view;
-  for (const view of ['today', 'todo']) {
-    $(`tab-${view}`).textContent = t()[view];
-    $(`tab-${view}`).classList.toggle('active', state.view === view);
+  for (const section of new Set(Object.values(SECTION_OF))) $(`view-${section}`).hidden = SECTION_OF[state.view] !== section;
+  for (const tab of TABS) {
+    $(`tab-${tab}`).textContent = t().tabs[tab];
+    $(`tab-${tab}`).classList.toggle('active', state.view === tab);
   }
   $('settings').classList.toggle('active', state.view === 'settings');
   $('settings').title = $('settings').ariaLabel = t().settings;
@@ -302,20 +304,27 @@ function renderTodo() {
   const chosen = Number($('todo-category').value || 0);
   $('todo-category').replaceWith(categorySelect('todo-category', chosen));
   $('todo-urgency').replaceWith(urgencySelect('todo-urgency', $('todo-urgency').value || 'normal'));
-  const groups = backlogByUrgency(state.planner);
-  $('todo-list').replaceChildren(...(groups.length ? groups.flatMap(urgencyGroup)
-    : [el('li', {}, el('span', { className: 'text empty', textContent: t().noTodo }))]));
+  const rows = state.view === 'urgency' ? urgencyGroupRows() : openBacklog(state.planner).map((item) => itemRow(item, { showUrgency: true }));
+  $('todo-list').replaceChildren(...(rows.length ? rows : [el('li', {}, el('span', { className: 'text empty', textContent: t().noTodo }))]));
 }
 
-function urgencyGroup({ urgency, items }) {
-  const heading = el('li', { className: 'group', textContent: `${t().urgencyGroup[urgency]} · ${items.length}` });
-  heading.style.color = URGENCY_COLORS[urgency];
-  return [heading, ...items.map((item) => el('li', {}, ...(editing.is('item', item.id) ? [itemEditor(item)] : todoRow(item))))];
+/** URGENCY tab: a coloured heading per urgency level (most urgent first), then its items. */
+function urgencyGroupRows() {
+  return backlogByUrgency(state.planner).flatMap(({ urgency, items }) => {
+    const heading = el('li', { className: 'group', textContent: `${t().urgencyGroup[urgency]} · ${items.length}` });
+    heading.style.color = URGENCY_COLORS[urgency];
+    return [heading, ...items.map((item) => itemRow(item, { showUrgency: false }))];
+  });
 }
 
-function todoRow(item) {
+function itemRow(item, { showUrgency }) {
+  return el('li', {}, ...(editing.is('item', item.id) ? [itemEditor(item)] : todoRow(item, showUrgency)));
+}
+
+function todoRow(item, showUrgency) {
   const inToday = todayTaskFor(state.planner, item.id, localDay());
-  return [categoryLabel(item.category), tappable(el('span', { className: 'text', textContent: item.text }), () => editing.open('item', item.id)),
+  const text = el('span', { className: 'text' }, item.text, showUrgency ? el('span', { className: 'under' }, urgencyPill(item.urgency)) : null);
+  return [categoryLabel(item.category), tappable(text, () => editing.open('item', item.id)),
     inToday ? el('span', { className: 'tag', textContent: t().inToday }) : button(t().toToday, () => sendItemToToday(item)),
     button(t().done, () => { completeBacklog(state.planner, item.id, localDay()); persist(); })];
 }
@@ -396,7 +405,7 @@ function showNotice(text) {
 
 // ------------------------------------------------------------------ start
 
-for (const view of ['today', 'todo']) $(`tab-${view}`).addEventListener('click', () => showView(view));
+for (const tab of TABS) $(`tab-${tab}`).addEventListener('click', () => showView(tab));
 $('settings').addEventListener('click', () => showView(state.view === 'settings' ? 'today' : 'settings'));
 $('sync-status').addEventListener('click', () => showView('settings'));
 $('todo-form').addEventListener('submit', addTodoFromForm);

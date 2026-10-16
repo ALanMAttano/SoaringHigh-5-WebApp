@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { merge, stamp, toPlanner } from '../merge.js';
 import {
-  addBacklog, addToSlot, backlogByUrgency, completeBacklog, deleteBacklog, deleteSlotTask, emptyPlanner, freeSlots,
+  addBacklog, addToSlot, backlogByUrgency, completeBacklog, openBacklog, deleteBacklog, deleteSlotTask, emptyPlanner, freeSlots,
   sendToToday, setSlotStatus, todayTaskFor, updateBacklog, updateSlotTask,
 } from '../planner.js';
 
@@ -150,4 +150,15 @@ test('ticking a TODO item done closes today\'s task made from it', () => {
   sendToToday(p, 'item', DAY, () => 'task');
   assert.ok(completeBacklog(p, 'item', DAY));
   assert.deepEqual([p.backlog[0].status, p.slotTasks[0].status], ['done', 'done']);
+});
+
+test('TODO tab: all open items in creation order, whatever their urgency or category', () => {
+  const p = emptyPlanner();
+  const id = ids();
+  addBacklog(p, 'first', 3, 'wish', id);
+  addBacklog(p, 'second', 0, 'urgentImportant', id);
+  addBacklog(p, 'third', 1, 'normal', id);
+  updateBacklog(p, 'id-1', 'first!', 2, 'urgent', DAY); // editing does not move it
+  completeBacklog(p, 'id-3', DAY);
+  assert.deepEqual(openBacklog(p).map((b) => b.text), ['first!', 'second']);
 });

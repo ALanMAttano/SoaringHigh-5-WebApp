@@ -1,13 +1,14 @@
 // Spanish, English and Italian texts (Spanish is the default when the browser is neither English nor Italian).
 const TEXTS = {
   es: {
-    settings: 'Ajustes', appearance: 'APARIENCIA', language: 'Idioma', languageAuto: 'Teléfono', hue: 'Tono del texto', saturation: 'Saturación del texto',
+    tabs: { today: 'HOY', todo: 'TODO', urgency: 'URGENCIA' },
+    settings: 'Ajustes', appearance: 'APARIENCIA', language: 'Idioma', languageAuto: 'AUTO', hue: 'Tono del texto', saturation: 'Saturación del texto',
     resetColors: 'RESTABLECER COLORES', categoriesHeading: 'CATEGORÍAS', pickColor: 'Elegir color', defaultColor: 'Color original',
     colorsLocal: 'Los nombres se sincronizan con la PC; los colores quedan solo en este teléfono.',
     syncHeading: 'SINCRONIZACIÓN', status: 'Estado', lastSync: 'Última sincronización', conflictsLabel: 'Conflictos',
     appHeading: 'APP', changeLog: 'Registro de cambios', viewChangeLog: 'VER CAMBIOS',
     changeLogTip: 'Abre el historial de versiones en GitHub (hay que iniciar sesión: el repositorio es privado).', madeBy: 'hecho por {0}',
-    today: 'HOY', todo: 'TODO', add: 'AGREGAR', save: 'GUARDAR', delete: 'BORRAR', done: 'HECHO', undo: 'DESHACER', cancel: 'CANCELAR',
+    add: 'AGREGAR', save: 'GUARDAR', delete: 'BORRAR', done: 'HECHO', undo: 'DESHACER', cancel: 'CANCELAR',
     toToday: '→ HOY', inToday: 'EN HOY', locale: 'es-AR',
     emptySlot: 'Libre: tocá para agregar una tarea', placeholder: 'Tarea de hoy…', todoPlaceholder: 'Nueva tarea para la lista…',
     editHint: 'Tocá una tarea para editarla.', category: 'Categoría', urgencyLabel: 'Urgencia',
@@ -24,13 +25,14 @@ const TEXTS = {
     urgencyGroup: { urgentImportant: 'Urgente e importante', urgent: 'Urgente', important: 'Importante', normal: 'Normal', wish: 'Deseo' },
   },
   en: {
-    settings: 'Settings', appearance: 'APPEARANCE', language: 'Language', languageAuto: 'Phone', hue: 'Text hue', saturation: 'Text saturation',
+    tabs: { today: 'TODAY', todo: 'TODO', urgency: 'URGENCY' },
+    settings: 'Settings', appearance: 'APPEARANCE', language: 'Language', languageAuto: 'AUTO', hue: 'Text hue', saturation: 'Text saturation',
     resetColors: 'RESET COLOURS', categoriesHeading: 'CATEGORIES', pickColor: 'Pick a colour', defaultColor: 'Original colour',
     colorsLocal: 'Names sync with the PC; colours stay on this phone only.',
     syncHeading: 'SYNC', status: 'Status', lastSync: 'Last sync', conflictsLabel: 'Conflicts',
     appHeading: 'APP', changeLog: 'Change log', viewChangeLog: 'VIEW CHANGE LOG',
     changeLogTip: 'Opens the release history on GitHub (sign-in needed: the repository is private).', madeBy: 'made by {0}',
-    today: 'TODAY', todo: 'TODO', add: 'ADD', save: 'SAVE', delete: 'DELETE', done: 'DONE', undo: 'UNDO', cancel: 'CANCEL',
+    add: 'ADD', save: 'SAVE', delete: 'DELETE', done: 'DONE', undo: 'UNDO', cancel: 'CANCEL',
     toToday: '→ TODAY', inToday: 'TODAY', locale: 'en-US',
     emptySlot: 'Free: tap to add a task', placeholder: "Today's task…", todoPlaceholder: 'New task for the list…',
     editHint: 'Tap a task to edit it.', category: 'Category', urgencyLabel: 'Urgency',
@@ -47,13 +49,14 @@ const TEXTS = {
     urgencyGroup: { urgentImportant: 'Urgent & important', urgent: 'Urgent', important: 'Important', normal: 'Normal', wish: 'Wish' },
   },
   it: {
-    settings: 'Impostazioni', appearance: 'ASPETTO', language: 'Lingua', languageAuto: 'Telefono', hue: 'Tonalità del testo', saturation: 'Saturazione del testo',
+    tabs: { today: 'OGGI', todo: 'TODO', urgency: 'URGENZA' },
+    settings: 'Impostazioni', appearance: 'ASPETTO', language: 'Lingua', languageAuto: 'AUTO', hue: 'Tonalità del testo', saturation: 'Saturazione del testo',
     resetColors: 'RIPRISTINA COLORI', categoriesHeading: 'CATEGORIE', pickColor: 'Scegli un colore', defaultColor: 'Colore originale',
     colorsLocal: 'I nomi si sincronizzano con il PC; i colori restano solo su questo telefono.',
     syncHeading: 'SINCRONIZZAZIONE', status: 'Stato', lastSync: 'Ultima sincronizzazione', conflictsLabel: 'Conflitti',
     appHeading: 'APP', changeLog: 'Registro modifiche', viewChangeLog: 'VEDI MODIFICHE',
     changeLogTip: "Apre la cronologia delle versioni su GitHub (serve l'accesso: il repository è privato).", madeBy: 'creato da {0}',
-    today: 'OGGI', todo: 'TODO', add: 'AGGIUNGI', save: 'SALVA', delete: 'ELIMINA', done: 'FATTO', undo: 'ANNULLA', cancel: 'CHIUDI',
+    add: 'AGGIUNGI', save: 'SALVA', delete: 'ELIMINA', done: 'FATTO', undo: 'ANNULLA', cancel: 'CHIUDI',
     toToday: '→ OGGI', inToday: 'OGGI', locale: 'it-IT',
     emptySlot: 'Libero: tocca per aggiungere un compito', placeholder: 'Compito di oggi…', todoPlaceholder: 'Nuovo compito per la lista…',
     editHint: 'Tocca un compito per modificarlo.', category: 'Categoria', urgencyLabel: 'Urgenza',
@@ -72,6 +75,9 @@ const TEXTS = {
 };
 
 export const LANGUAGES = Object.keys(TEXTS);
+
+/** Short labels for the Settings language buttons. */
+export const LANGUAGE_ABBREVIATIONS = Object.freeze({ es: 'ESP', en: 'ENG', it: 'ITA' });
 
 export function pickLanguage(saved, browserLanguages) {
   if (saved && TEXTS[saved]) return saved;

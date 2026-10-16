@@ -21,10 +21,10 @@ header { display: flex; align-items: center; justify-content: space-between; pad
 .list li { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); min-height: 58px; }
 .list li:last-child { border-bottom: 0; }
 .cat { width: 78px; flex: none; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
-.text { flex: 1; word-break: break-word; }
+.text { flex: 1 1 130px; word-break: normal; overflow-wrap: anywhere; }
 .text.empty { color: var(--dim); font-style: italic; }
 .text.finished { color: var(--done); text-decoration: line-through; }
-.pill { flex: none; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; border: 1px solid currentColor; }
+.pill { flex: none; white-space: nowrap; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; border: 1px solid currentColor; }
 .pill.filled { background: var(--danger); color: #000 !important; border-color: var(--danger); }
 .row-form { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
 .slot-form { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; }
@@ -74,3 +74,5 @@ input, select { min-height: 44px; }
 a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 .note { color: var(--dim); font-size: 13px; margin: 4px 0 0; }
 .credit { color: var(--done); font-size: 12px; margin: 14px 0 0; }
+.tappable.text:has(.under) { flex-direction: column; align-items: flex-start; gap: 4px; }
+.under { display: block; }
