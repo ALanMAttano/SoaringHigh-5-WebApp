@@ -15,7 +15,7 @@
 <body>
   <header>
     <div class="brand"><img src="icons/icon-192.png" alt=""><span>SoaringHigh-5</span></div>
-    <button id="lang" class="link" type="button">EN</button>
+    <button id="settings" class="gear" type="button" aria-label="Settings">⚙</button>
   </header>
   <div id="date" class="date"></div>
   <nav class="tabs">
@@ -34,15 +34,12 @@
       </form>
       <ul id="todo-list" class="list"></ul>
     </section>
+    <section id="view-settings" class="settings" hidden></section>
     <p id="hint" class="hint"></p>
   </main>
   <footer>
-    <div class="sync-buttons">
-      <button id="connect" class="btn" type="button"></button>
-      <button id="sync" class="btn" type="button"></button>
-    </div>
-    <div id="sync-status" class="status"></div>
-    <div class="version">SoaringHigh-5 PWA v2.27</div>
+    <div id="sync-status" class="status tappable"></div>
+    <div id="version" class="version">SoaringHigh-5 PWA v2.28</div>
   </footer>
 </body>
 </html>

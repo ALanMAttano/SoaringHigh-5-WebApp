@@ -1,0 +1,437 @@
+{
+ "note": "Shared by pwa/tests/color.test.js and tests/SoaringHigh5.Core.Tests/ColorTuningParityTests.cs: the PWA and the desktop must give the same colours.",
+ "cases": [
+  {
+   "color": "#00FF41",
+   "hue": 0,
+   "saturation": 100,
+   "expected": "#00FF41"
+  },
+  {
+   "color": "#00FF41",
+   "hue": -180,
+   "saturation": 35,
+   "expected": "#FFA6E8"
+  },
+  {
+   "color": "#00FF41",
+   "hue": -120,
+   "saturation": 70,
+   "expected": "#FF7A4D"
+  },
+  {
+   "color": "#00FF41",
+   "hue": -60,
+   "saturation": 100,
+   "expected": "#BEFF00"
+  },
+  {
+   "color": "#00FF41",
+   "hue": 45,
+   "saturation": 50,
+   "expected": "#80FEFF"
+  },
+  {
+   "color": "#00FF41",
+   "hue": 90,
+   "saturation": 35,
+   "expected": "#A6BCFF"
+  },
+  {
+   "color": "#00FF41",
+   "hue": 120,
+   "saturation": 100,
+   "expected": "#6F3DFF"
+  },
+  {
+   "color": "#00FF41",
+   "hue": 180,
+   "saturation": 70,
+   "expected": "#FF4DD2"
+  },
+  {
+   "color": "#00FF41",
+   "hue": 17,
+   "saturation": 83,
+   "expected": "#2BFF9D"
+  },
+  {
+   "color": "#01C432",
+   "hue": 0,
+   "saturation": 100,
+   "expected": "#01C432"
+  },
+  {
+   "color": "#01C432",
+   "hue": -180,
+   "saturation": 35,
+   "expected": "#C480B3"
+  },
+  {
+   "color": "#01C432",
+   "hue": -120,
+   "saturation": 70,
+   "expected": "#C45E3B"
+  },
+  {
+   "color": "#01C432",
+   "hue": -60,
+   "saturation": 100,
+   "expected": "#93C401"
+  },
+  {
+   "color": "#01C432",
+   "hue": 45,
+   "saturation": 50,
+   "expected": "#62C4C4"
+  },
+  {
+   "color": "#01C432",
+   "hue": 90,
+   "saturation": 35,
+   "expected": "#8091C4"
+  },
+  {
+   "color": "#01C432",
+   "hue": 120,
+   "saturation": 100,
+   "expected": "#6B48D5"
+  },
+  {
+   "color": "#01C432",
+   "hue": 180,
+   "saturation": 70,
+   "expected": "#C43BA2"
+  },
+  {
+   "color": "#01C432",
+   "hue": 17,
+   "saturation": 83,
+   "expected": "#22C479"
+  },
+  {
+   "color": "#029A28",
+   "hue": 0,
+   "saturation": 100,
+   "expected": "#029A28"
+  },
+  {
+   "color": "#029A28",
+   "hue": -180,
+   "saturation": 35,
+   "expected": "#9A658D"
+  },
+  {
+   "color": "#029A28",
+   "hue": -120,
+   "saturation": 70,
+   "expected": "#9A4A30"
+  },
+  {
+   "color": "#029A28",
+   "hue": -60,
+   "saturation": 100,
+   "expected": "#749A02"
+  },
+  {
+   "color": "#029A28",
+   "hue": 45,
+   "saturation": 50,
+   "expected": "#4E9A9A"
+  },
+  {
+   "color": "#029A28",
+   "hue": 90,
+   "saturation": 35,
+   "expected": "#65729A"
+  },
+  {
+   "color": "#029A28",
+   "hue": 120,
+   "saturation": 100,
+   "expected": "#6449B6"
+  },
+  {
+   "color": "#029A28",
+   "hue": 180,
+   "saturation": 70,
+   "expected": "#9E3884"
+  },
+  {
+   "color": "#029A28",
+   "hue": 17,
+   "saturation": 83,
+   "expected": "#1C9A5F"
+  },
+  {
+   "color": "#02711D",
+   "hue": 0,
+   "saturation": 100,
+   "expected": "#02711D"
+  },
+  {
+   "color": "#02711D",
+   "hue": -180,
+   "saturation": 35,
+   "expected": "#714A68"
+  },
+  {
+   "color": "#02711D",
+   "hue": -120,
+   "saturation": 70,
+   "expected": "#824E3D"
+  },
+  {
+   "color": "#02711D",
+   "hue": -60,
+   "saturation": 100,
+   "expected": "#567102"
+  },
+  {
+   "color": "#02711D",
+   "hue": 45,
+   "saturation": 50,
+   "expected": "#397171"
+  },
+  {
+   "color": "#02711D",
+   "hue": 90,
+   "saturation": 35,
+   "expected": "#4A5471"
+  },
+  {
+   "color": "#02711D",
+   "hue": 120,
+   "saturation": 100,
+   "expected": "#5C4999"
+  },
+  {
+   "color": "#02711D",
+   "hue": 180,
+   "saturation": 70,
+   "expected": "#884678"
+  },
+  {
+   "color": "#02711D",
+   "hue": 17,
+   "saturation": 83,
+   "expected": "#157145"
+  },
+  {
+   "color": "#033B0F",
+   "hue": 0,
+   "saturation": 100,
+   "expected": "#033B0F"
+  },
+  {
+   "color": "#033B0F",
+   "hue": -180,
+   "saturation": 35,
+   "expected": "#3B2737"
+  },
+  {
+   "color": "#033B0F",
+   "hue": -120,
+   "saturation": 70,
+   "expected": "#4B2E27"
+  },
+  {
+   "color": "#033B0F",
+   "hue": -60,
+   "saturation": 100,
+   "expected": "#2F3B03"
+  },
+  {
+   "color": "#033B0F",
+   "hue": 45,
+   "saturation": 50,
+   "expected": "#1F3B3A"
+  },
+  {
+   "color": "#033B0F",
+   "hue": 90,
+   "saturation": 35,
+   "expected": "#272D3B"
+  },
+  {
+   "color": "#033B0F",
+   "hue": 120,
+   "saturation": 100,
+   "expected": "#352B5A"
+  },
+  {
+   "color": "#033B0F",
+   "hue": 180,
+   "saturation": 70,
+   "expected": "#4B2743"
+  },
+  {
+   "color": "#033B0F",
+   "hue": 17,
+   "saturation": 83,
+   "expected": "#0D3B24"
+  },
+  {
+   "color": "#0F5A2A",
+   "hue": 0,
+   "saturation": 100,
+   "expected": "#0F5A2A"
+  },
+  {
+   "color": "#0F5A2A",
+   "hue": -180,
+   "saturation": 35,
+   "expected": "#5A4051"
+  },
+  {
+   "color": "#0F5A2A",
+   "hue": -120,
+   "saturation": 70,
+   "expected": "#674837"
+  },
+  {
+   "color": "#0F5A2A",
+   "hue": -60,
+   "saturation": 100,
+   "expected": "#3F5A0F"
+  },
+  {
+   "color": "#0F5A2A",
+   "hue": 45,
+   "saturation": 50,
+   "expected": "#35565A"
+  },
+  {
+   "color": "#0F5A2A",
+   "hue": 90,
+   "saturation": 35,
+   "expected": "#484B61"
+  },
+  {
+   "color": "#0F5A2A",
+   "hue": 120,
+   "saturation": 100,
+   "expected": "#553F7B"
+  },
+  {
+   "color": "#0F5A2A",
+   "hue": 180,
+   "saturation": 70,
+   "expected": "#6E405D"
+  },
+  {
+   "color": "#0F5A2A",
+   "hue": 17,
+   "saturation": 83,
+   "expected": "#1C5A44"
+  },
+  {
+   "color": "#FF4FD8",
+   "hue": 0,
+   "saturation": 100,
+   "expected": "#FF4FD8"
+  },
+  {
+   "color": "#FF4FD8",
+   "hue": -180,
+   "saturation": 35,
+   "expected": "#C1FFCF"
+  },
+  {
+   "color": "#FF4FD8",
+   "hue": -120,
+   "saturation": 70,
+   "expected": "#84E4FF"
+  },
+  {
+   "color": "#FF4FD8",
+   "hue": -60,
+   "saturation": 100,
+   "expected": "#764FFF"
+  },
+  {
+   "color": "#FF4FD8",
+   "hue": 45,
+   "saturation": 50,
+   "expected": "#FFA7AA"
+  },
+  {
+   "color": "#FF4FD8",
+   "hue": 90,
+   "saturation": 35,
+   "expected": "#FFEEC1"
+  },
+  {
+   "color": "#FF4FD8",
+   "hue": 120,
+   "saturation": 100,
+   "expected": "#D8FF4F"
+  },
+  {
+   "color": "#FF4FD8",
+   "hue": 180,
+   "saturation": 70,
+   "expected": "#84FF9F"
+  },
+  {
+   "color": "#FF4FD8",
+   "hue": 17,
+   "saturation": 83,
+   "expected": "#FF6DB5"
+  },
+  {
+   "color": "#E6FF00",
+   "hue": 0,
+   "saturation": 100,
+   "expected": "#E6FF00"
+  },
+  {
+   "color": "#E6FF00",
+   "hue": -180,
+   "saturation": 35,
+   "expected": "#AEA6FF"
+  },
+  {
+   "color": "#E6FF00",
+   "hue": -120,
+   "saturation": 70,
+   "expected": "#FF4DEE"
+  },
+  {
+   "color": "#E6FF00",
+   "hue": -60,
+   "saturation": 100,
+   "expected": "#FF2B14"
+  },
+  {
+   "color": "#E6FF00",
+   "hue": 45,
+   "saturation": 50,
+   "expected": "#93FF80"
+  },
+  {
+   "color": "#E6FF00",
+   "hue": 90,
+   "saturation": 35,
+   "expected": "#A6FFDB"
+  },
+  {
+   "color": "#E6FF00",
+   "hue": 120,
+   "saturation": 100,
+   "expected": "#00E6FF"
+  },
+  {
+   "color": "#E6FF00",
+   "hue": 180,
+   "saturation": 70,
+   "expected": "#5E4DFF"
+  },
+  {
+   "color": "#E6FF00",
+   "hue": 17,
+   "saturation": 83,
+   "expected": "#AEFF2B"
+  }
+ ]
+}

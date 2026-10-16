@@ -1,6 +1,12 @@
 // Spanish, English and Italian texts (Spanish is the default when the browser is neither English nor Italian).
 const TEXTS = {
   es: {
+    settings: 'Ajustes', appearance: 'APARIENCIA', language: 'Idioma', languageAuto: 'Teléfono', hue: 'Tono del texto', saturation: 'Saturación del texto',
+    resetColors: 'RESTABLECER COLORES', categoriesHeading: 'CATEGORÍAS', pickColor: 'Elegir color', defaultColor: 'Color original',
+    colorsLocal: 'Los nombres se sincronizan con la PC; los colores quedan solo en este teléfono.',
+    syncHeading: 'SINCRONIZACIÓN', status: 'Estado', lastSync: 'Última sincronización', conflictsLabel: 'Conflictos',
+    appHeading: 'APP', changeLog: 'Registro de cambios', viewChangeLog: 'VER CAMBIOS',
+    changeLogTip: 'Abre el historial de versiones en GitHub (hay que iniciar sesión: el repositorio es privado).', madeBy: 'hecho por {0}',
     today: 'HOY', todo: 'TODO', add: 'AGREGAR', save: 'GUARDAR', delete: 'BORRAR', done: 'HECHO', undo: 'DESHACER', cancel: 'CANCELAR',
     toToday: '→ HOY', inToday: 'EN HOY', locale: 'es-AR',
     emptySlot: 'Libre: tocá para agregar una tarea', placeholder: 'Tarea de hoy…', todoPlaceholder: 'Nueva tarea para la lista…',
@@ -18,6 +24,12 @@ const TEXTS = {
     urgencyGroup: { urgentImportant: 'Urgente e importante', urgent: 'Urgente', important: 'Importante', normal: 'Normal', wish: 'Deseo' },
   },
   en: {
+    settings: 'Settings', appearance: 'APPEARANCE', language: 'Language', languageAuto: 'Phone', hue: 'Text hue', saturation: 'Text saturation',
+    resetColors: 'RESET COLOURS', categoriesHeading: 'CATEGORIES', pickColor: 'Pick a colour', defaultColor: 'Original colour',
+    colorsLocal: 'Names sync with the PC; colours stay on this phone only.',
+    syncHeading: 'SYNC', status: 'Status', lastSync: 'Last sync', conflictsLabel: 'Conflicts',
+    appHeading: 'APP', changeLog: 'Change log', viewChangeLog: 'VIEW CHANGE LOG',
+    changeLogTip: 'Opens the release history on GitHub (sign-in needed: the repository is private).', madeBy: 'made by {0}',
     today: 'TODAY', todo: 'TODO', add: 'ADD', save: 'SAVE', delete: 'DELETE', done: 'DONE', undo: 'UNDO', cancel: 'CANCEL',
     toToday: '→ TODAY', inToday: 'TODAY', locale: 'en-US',
     emptySlot: 'Free: tap to add a task', placeholder: "Today's task…", todoPlaceholder: 'New task for the list…',
@@ -35,6 +47,12 @@ const TEXTS = {
     urgencyGroup: { urgentImportant: 'Urgent & important', urgent: 'Urgent', important: 'Important', normal: 'Normal', wish: 'Wish' },
   },
   it: {
+    settings: 'Impostazioni', appearance: 'ASPETTO', language: 'Lingua', languageAuto: 'Telefono', hue: 'Tonalità del testo', saturation: 'Saturazione del testo',
+    resetColors: 'RIPRISTINA COLORI', categoriesHeading: 'CATEGORIE', pickColor: 'Scegli un colore', defaultColor: 'Colore originale',
+    colorsLocal: 'I nomi si sincronizzano con il PC; i colori restano solo su questo telefono.',
+    syncHeading: 'SINCRONIZZAZIONE', status: 'Stato', lastSync: 'Ultima sincronizzazione', conflictsLabel: 'Conflitti',
+    appHeading: 'APP', changeLog: 'Registro modifiche', viewChangeLog: 'VEDI MODIFICHE',
+    changeLogTip: "Apre la cronologia delle versioni su GitHub (serve l'accesso: il repository è privato).", madeBy: 'creato da {0}',
     today: 'OGGI', todo: 'TODO', add: 'AGGIUNGI', save: 'SALVA', delete: 'ELIMINA', done: 'FATTO', undo: 'ANNULLA', cancel: 'CHIUDI',
     toToday: '→ OGGI', inToday: 'OGGI', locale: 'it-IT',
     emptySlot: 'Libero: tocca per aggiungere un compito', placeholder: 'Compito di oggi…', todoPlaceholder: 'Nuovo compito per la lista…',
@@ -60,9 +78,6 @@ export function pickLanguage(saved, browserLanguages) {
   const prefix = (browserLanguages || []).map((l) => l.toLowerCase().slice(0, 2)).find((l) => l === 'en' || l === 'it');
   return prefix ?? 'es';
 }
-
-/** The language after `lang` in the header toggle (es → en → it → es). */
-export const nextLanguage = (lang) => LANGUAGES[(LANGUAGES.indexOf(lang) + 1) % LANGUAGES.length];
 
 export function texts(lang) { return TEXTS[lang] || TEXTS.es; }
 

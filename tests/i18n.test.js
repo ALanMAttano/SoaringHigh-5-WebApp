@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LANGUAGES, nextLanguage, pickLanguage, texts } from '../i18n.js';
+import { LANGUAGES, pickLanguage, texts } from '../i18n.js';
 
 test('every language has the same keys (es, en, it)', () => {
   const keys = (o) => Object.keys(o).sort();
@@ -12,10 +12,10 @@ test('every language has the same keys (es, en, it)', () => {
   }
 });
 
-test('language pick and toggle', () => {
+test('language pick: saved choice, else the phone language, else Spanish', () => {
   assert.equal(pickLanguage(null, ['it-IT', 'en']), 'it');
   assert.equal(pickLanguage(null, ['en-GB']), 'en');
   assert.equal(pickLanguage(null, ['de-DE']), 'es');
   assert.equal(pickLanguage('en', ['it']), 'en');
-  assert.deepEqual([nextLanguage('es'), nextLanguage('en'), nextLanguage('it')], ['en', 'it', 'es']);
+  assert.equal(pickLanguage(null, ['es-AR']), 'es');
 });

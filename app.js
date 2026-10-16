@@ -1,4 +1,4 @@
-// SoaringHigh-5 PWA: today's 5 slots + TODO list, stored locally (offline-first) and synced through Google Drive.
+// SoaringHigh-5 PWA: today's 5 slots + TODO list + Settings, stored locally (offline-first) and synced through Google Drive.
 import { GOOGLE_CLIENT_ID } from './config.js';
 import { CATEGORY_COUNT, URGENCIES, stamp, toPlanner, parseDocument } from './merge.js';
 import {
@@ -7,21 +7,25 @@ import {
 } from './planner.js';
 import { GoogleAuth, DriveStore } from './sync.js';
 import { syncOnce } from './engine.js';
-import { format, nextLanguage, pickLanguage, texts } from './i18n.js';
+import { format, pickLanguage, texts } from './i18n.js';
+import { tunedTheme } from './color.js';
+import { APP_NAME, PWA_VERSION } from './app-info.js';
+import { adoptSyncedCategoryNames, categoryColor, categoryNamesForSync, customCategoryName, loadSettings, saveSettings } from './settings.js';
+import { renderSettings } from './settings-view.js';
+import { $, button, el, tappable } from './dom.js';
 
-const KEY = { planner: 'sh5.planner', snapshot: 'sh5.snapshot', device: 'sh5.deviceId', lang: 'sh5.lang', lastSync: 'sh5.lastSync', connected: 'sh5.connected' };
+const KEY = { planner: 'sh5.planner', snapshot: 'sh5.snapshot', device: 'sh5.deviceId', lastSync: 'sh5.lastSync', connected: 'sh5.connected' };
 const CHANGE_DEBOUNCE_MS = 5000;
 const PERIODIC_MS = 5 * 60 * 1000;
 const DAY_CHECK_MS = 60 * 1000;
-const CATEGORY_COLORS = ['#00FF41', '#FF4FD8', '#00E5FF', '#5C7CFF', '#FF9E3D'];
 const URGENCY_COLORS = { urgentImportant: '#FF003C', urgent: '#FF7A1A', important: '#FFC400', normal: '#3DBA5A', wish: '#8FA8FF' };
 
-const $ = (id) => document.getElementById(id);
+const VIEWS = ['today', 'todo', 'settings'];
 const load = (k, fallback) => { try { return JSON.parse(localStorage.getItem(k)) ?? fallback; } catch { return fallback; } };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
 const state = {
-  lang: pickLanguage(localStorage.getItem(KEY.lang), navigator.languages),
+  settings: loadSettings(localStorage),
   planner: load(KEY.planner, emptyPlanner()),
   deviceId: localStorage.getItem(KEY.device) || `pwa-${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`,
   view: 'today',
@@ -34,13 +38,26 @@ const auth = new GoogleAuth(GOOGLE_CLIENT_ID);
 const drive = new DriveStore(auth);
 let changeTimer = null;
 
-const t = () => texts(state.lang);
+const language = () => pickLanguage(state.settings.language, navigator.languages);
+const t = () => texts(language());
 const snapshot = () => parseDocument(localStorage.getItem(KEY.snapshot));
 const isConnected = () => localStorage.getItem(KEY.connected) === '1';
 
-function categoryName(i) {
-  const custom = snapshot()?.categoryNames?.value?.[i];
-  return custom && custom.trim() ? custom : t().categories[i];
+const categoryName = (i) => customCategoryName(state.settings, i) ?? t().categories[i];
+
+/** Saves a settings change and applies it; `sync` when the change is part of the synced data (category names). */
+function updateSettings(next, { rerender = true, sync = false } = {}) {
+  state.settings = next;
+  saveSettings(localStorage, next);
+  applyTuning();
+  if (rerender) render();
+  else renderMain(); // keep the Settings inputs (focus, slider) as they are
+  if (sync) scheduleSync(CHANGE_DEBOUNCE_MS);
+}
+
+/** Text hue/saturation: the tuned theme colours as CSS variables (live, all text and neon borders). */
+function applyTuning(tuning = state.settings) {
+  for (const [name, value] of Object.entries(tunedTheme(tuning))) document.documentElement.style.setProperty(name, value);
 }
 
 // ------------------------------------------------------------------ data
@@ -72,13 +89,15 @@ async function syncNow(interactive) {
   setStatus('running');
   try {
     if (!auth.hasToken) await auth.request(false);
-    const before = JSON.stringify(state.planner);
+    const unchanged = sameLocalData();
     const base = snapshot();
-    const local = stamp(state.planner, base, Date.now(), state.deviceId, null);
+    const local = stamp(state.planner, base, Date.now(), state.deviceId, categoryNamesForSync(state.settings));
     const outcome = await syncOnce(drive, local, base, state.deviceId);
     if (outcome.status === 'synced') {
-      if (JSON.stringify(state.planner) === before) {
+      if (unchanged()) {
         state.planner = toPlanner(outcome.merged, localDay());
+        state.settings = adoptSyncedCategoryNames(state.settings, outcome.merged);
+        saveSettings(localStorage, state.settings);
         localStorage.setItem(KEY.snapshot, JSON.stringify(outcome.merged));
         localStorage.setItem(KEY.lastSync, String(Date.now()));
         save(KEY.planner, state.planner);
@@ -96,6 +115,13 @@ async function syncNow(interactive) {
     state.syncing = false;
     renderUnlessEditing();
   }
+}
+
+/** A check for "nothing was edited while the sync ran" (tasks, TODO items and category names). */
+function sameLocalData() {
+  const now = () => JSON.stringify([state.planner, state.settings.categoryNames]);
+  const before = now();
+  return () => now() === before;
 }
 
 async function toggleConnection() {
@@ -118,7 +144,7 @@ async function toggleConnection() {
 
 function setStatus(status) {
   state.status = status;
-  renderFooter();
+  renderSyncInfo();
 }
 
 // ------------------------------------------------------------------ UI
@@ -131,40 +157,45 @@ const editing = {
 };
 
 function render() {
+  renderMain();
+  if (state.view === 'settings') renderSettings($('view-settings'), settingsContext());
+}
+
+/** Everything except the Settings screen (which keeps its inputs while you type or drag). */
+function renderMain() {
   $('date').textContent = new Date().toLocaleDateString(t().locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  document.documentElement.lang = language();
   renderTabs();
-  $('lang').textContent = nextLanguage(state.lang).toUpperCase();
-  document.documentElement.lang = state.lang;
   renderSlots();
   renderTodo();
   renderFooter();
 }
 
 function renderTabs() {
+  for (const view of VIEWS) $(`view-${view}`).hidden = state.view !== view;
   for (const view of ['today', 'todo']) {
     $(`tab-${view}`).textContent = t()[view];
     $(`tab-${view}`).classList.toggle('active', state.view === view);
-    $(`view-${view}`).hidden = state.view !== view;
   }
+  $('settings').classList.toggle('active', state.view === 'settings');
+  $('settings').title = $('settings').ariaLabel = t().settings;
   $('hint').textContent = t().editHint;
+  $('hint').hidden = state.view === 'settings';
 }
 
-function el(tag, props = {}, ...children) {
-  const node = Object.assign(document.createElement(tag), props);
-  node.append(...children.filter((c) => c !== null && c !== undefined));
-  return node;
+function showView(view) {
+  state.view = view;
+  editing.none();
+  render();
+  window.scrollTo(0, 0);
 }
 
-function button(text, onClick, className = 'btn') {
-  const b = el('button', { className, type: 'button', textContent: text });
-  b.addEventListener('click', onClick);
-  return b;
-}
-
-function tappable(node, onTap) {
-  node.classList.add('tappable');
-  node.addEventListener('click', onTap);
-  return node;
+function settingsContext() {
+  return {
+    t: t(), settings: state.settings, update: updateSettings,
+    previewTuning: (hue, saturation) => applyTuning({ hue, saturation }),
+    sync: syncInfo(), onConnect: toggleConnection, onSyncNow: () => syncNow(true),
+  };
 }
 
 function urgencyPill(u) {
@@ -175,7 +206,7 @@ function urgencyPill(u) {
 
 function categoryLabel(i) {
   const label = el('span', { className: 'cat', textContent: categoryName(i) });
-  label.style.color = CATEGORY_COLORS[i];
+  label.style.color = categoryColor(state.settings, i);
   return label;
 }
 
@@ -318,29 +349,38 @@ function showResult(result) {
   if (text) showNotice(text);
 }
 
-/** Background refreshes (sync, day change) must not wipe text being typed in an open editor. */
+/** Background refreshes (sync, day change) must not wipe text being typed in an open editor or in Settings. */
 function renderUnlessEditing() {
-  if (state.editing) renderFooter();
+  if (state.editing || state.view === 'settings') renderSyncInfo();
   else render();
 }
 
-// --- footer
+// --- sync status (footer line + Settings → Sync)
 
-function renderFooter() {
-  const connected = isConnected();
-  $('connect').textContent = connected ? t().disconnect : t().connect;
-  $('connect').disabled = !auth.configured || state.syncing;
-  $('sync').textContent = t().syncNow;
-  $('sync').disabled = !connected || state.syncing;
-  const conflicts = snapshot()?.conflicts?.length ?? 0;
-  $('sync-status').textContent = statusText() + (connected && conflicts ? ` · ${format(t().conflicts, conflicts)}` : '');
+function syncInfo() {
+  const last = Number(localStorage.getItem(KEY.lastSync));
+  return {
+    connected: isConnected(), configured: auth.configured, busy: state.syncing, statusText: statusText(last),
+    lastSyncText: last ? new Date(last).toLocaleString(t().locale, { dateStyle: 'short', timeStyle: 'short' }) : null,
+    conflicts: snapshot()?.conflicts?.length ?? 0,
+  };
 }
 
-function statusText() {
+function renderSyncInfo() {
+  renderFooter();
+  if (state.view === 'settings') renderSettings($('view-settings'), settingsContext());
+}
+
+function renderFooter() {
+  const info = syncInfo();
+  $('sync-status').textContent = info.statusText + (info.connected && info.conflicts ? ` · ${format(t().conflicts, info.conflicts)}` : '');
+  $('version').textContent = `${APP_NAME} ${PWA_VERSION}`;
+}
+
+function statusText(last) {
   if (!auth.configured) return t().notConfigured;
   if (!isConnected()) return t().off;
   if (state.status && state.status !== 'synced') return t()[state.status] ?? t().failed;
-  const last = Number(localStorage.getItem(KEY.lastSync));
   return last ? format(t().synced, new Date(last).toLocaleTimeString(t().locale, { hour: '2-digit', minute: '2-digit' })) : t().running;
 }
 
@@ -356,10 +396,9 @@ function showNotice(text) {
 
 // ------------------------------------------------------------------ start
 
-for (const view of ['today', 'todo']) $(`tab-${view}`).addEventListener('click', () => { state.view = view; editing.none(); render(); });
-$('lang').addEventListener('click', () => { state.lang = nextLanguage(state.lang); localStorage.setItem(KEY.lang, state.lang); render(); });
-$('connect').addEventListener('click', toggleConnection);
-$('sync').addEventListener('click', () => syncNow(true));
+for (const view of ['today', 'todo']) $(`tab-${view}`).addEventListener('click', () => showView(view));
+$('settings').addEventListener('click', () => showView(state.view === 'settings' ? 'today' : 'settings'));
+$('sync-status').addEventListener('click', () => showView('settings'));
 $('todo-form').addEventListener('submit', addTodoFromForm);
 window.addEventListener('online', () => scheduleSync(1000));
 document.addEventListener('visibilitychange', () => {
@@ -372,6 +411,7 @@ setInterval(() => { if (state.planner.lastRolloverDate !== localDay()) { rollove
 setInterval(() => scheduleSync(0), PERIODIC_MS);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
+applyTuning();
 rollover();
 render();
 scheduleSync(1500);
