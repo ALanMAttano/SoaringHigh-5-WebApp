@@ -1,19 +1,18 @@
 // Wish #7/#8 parity: the same fixtures are replayed by tests/SoaringHigh5.Core.Tests/TodayParityTests.cs, so the
-// phone and the desktop auto-fill, move and swap identically.
+// phone and the desktop auto-fill, move and displace identically.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { currentInSlot, deleteSlotTask, moveToSlot, sendToToday, setSlotStatus } from '../planner.js';
+import { currentInSlot, deleteSlotTask, sendToToday, setSlotStatus } from '../planner.js';
 
 const { day, cases } = JSON.parse(readFileSync(new URL('./today-fixtures.json', import.meta.url)));
 
 function run(p, op) {
   switch (op.kind) {
-    case 'done': return String(setSlotStatus(p, op.id, 'done', day));
-    case 'cancel': return String(setSlotStatus(p, op.id, 'cancelled', day));
+    case 'done': return String(setSlotStatus(p, op.id, 'done'));
+    case 'cancel': return String(setSlotStatus(p, op.id, 'cancelled'));
     case 'delete': return String(deleteSlotTask(p, op.id, day));
-    case 'move': return moveToSlot(p, op.id, op.slot, day);
-    default: { const r = sendToToday(p, op.id, day); return `${r.result}@${r.slot}`; }
+    default: { const r = sendToToday(p, op.id, day, op.slot ?? null); return `${r.result}@${r.slot}`; }
   }
 }
 

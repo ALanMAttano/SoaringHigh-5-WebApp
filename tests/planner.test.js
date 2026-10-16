@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { merge, stamp, toPlanner } from '../merge.js';
 import {
   addBacklog, addToFreeSlot, addToSlot, backlogByCategory, backlogByUrgency, completeBacklog, openBacklog, deleteBacklog, deleteSlotTask, emptyPlanner, freeSlots,
-  currentInSlot, moveSlotRow, moveToSlot, sendToToday, setSlotStatus, updateBacklog, updateSlotTask,
+  currentInSlot, leastImportantPending, moveSlotRow, sendToToday, setSlotStatus, updateBacklog, updateSlotTask,
 } from '../planner.js';
 
 const DAY = '2026-10-16';
@@ -113,24 +113,41 @@ test('-> HOY with its slot busy uses the first free slot', () => {
   assert.deepEqual(sendToToday(p, 'item', DAY), { result: 'moved', slot: 0 });
 });
 
-test('-> HOY with all five busy swaps with its own slot; the displaced task returns to TODO', () => {
-  const p = fullDay();
+test('-> HOY with all five busy: the least important task (tie: oldest) goes back to TODO', () => {
+  const p = fullDay(); // all 'normal': tie, so the oldest (id-1, slot 0) makes room
   addBacklog(p, 'extra', 2, 'urgent', () => 'item');
-  assert.deepEqual(sendToToday(p, 'item', DAY), { result: 'swapped', slot: 2 });
-  assert.equal(currentInSlot(p, 2, DAY).id, 'item');
-  assert.deepEqual(p.backlog.map((b) => [b.id, b.category, b.urgency, b.status]), [['id-3', 2, 'normal', 'open']]);
+  assert.deepEqual(sendToToday(p, 'item', DAY), { result: 'swapped', slot: 0 });
+  assert.equal(currentInSlot(p, 0, DAY).id, 'item');
+  assert.deepEqual(p.backlog.map((b) => [b.id, b.category, b.urgency, b.status]), [['id-1', 0, 'normal', 'open']]);
   assert.equal(p.slotTasks.length, 5);
 });
 
-test('moveToSlot refusals', () => {
+test('least important pending: lowest urgency wins over age; finished tasks never count', () => {
+  const p = fullDay();
+  p.slotTasks[3].urgency = 'wish';
+  assert.equal(leastImportantPending(p, DAY).id, 'id-4');
+  p.slotTasks[3].status = 'done';
+  assert.equal(leastImportantPending(p, DAY).id, 'id-1');
+});
+
+test('a dropped (preferred) slot is used when free; when busy a free slot is used instead', () => {
+  const p = emptyPlanner();
+  addToSlot(p, 4, 'busy', 'wish', DAY, () => 't4');
+  addBacklog(p, 'a', 1, 'normal', () => 'a');
+  addBacklog(p, 'b', 1, 'normal', () => 'b');
+  assert.deepEqual(sendToToday(p, 'a', DAY, 3), { result: 'moved', slot: 3 });
+  assert.deepEqual(sendToToday(p, 'b', DAY, 4), { result: 'moved', slot: 1 });
+});
+
+test('sendToToday refusals', () => {
   const p = emptyPlanner();
   addBacklog(p, 'x', 0, 'normal', () => 'item');
-  assert.equal(moveToSlot(p, 'item', 7, DAY), 'invalidSlot');
-  assert.equal(moveToSlot(p, 'nope', 0, DAY), 'notFound');
+  assert.deepEqual(sendToToday(p, 'item', DAY, 7), { result: 'invalidSlot' });
+  assert.deepEqual(sendToToday(p, 'nope', DAY), { result: 'notFound' });
   legacyLink(p, 'item', 0);
-  assert.equal(moveToSlot(p, 'item', 0, DAY), 'alreadyThere');
+  assert.deepEqual(sendToToday(p, 'item', DAY, 0), { result: 'alreadyThere' });
   completeBacklog(p, 'item', DAY);
-  assert.equal(moveToSlot(p, 'item', 1, DAY), 'notOpen');
+  assert.deepEqual(sendToToday(p, 'item', DAY, 1), { result: 'notOpen' });
 });
 
 test('a moved TODO item syncs as one task and a tombstoned item, never a duplicate', () => {
@@ -146,7 +163,7 @@ test('a moved TODO item syncs as one task and a tombstoned item, never a duplica
   assert.deepEqual(final.slotTasks.map((t) => [t.id, t.text]), [['item', 'gym']]);
 });
 
-test('auto-fill: done or deleted task pulls the most urgent open item of that category', () => {
+test('auto-fill: a deleted task pulls the most urgent open item of that category; done keeps the task', () => {
   const p = emptyPlanner();
   addToSlot(p, 1, 'today', 'normal', DAY, () => 'task');
   const id = ids();
@@ -154,6 +171,10 @@ test('auto-fill: done or deleted task pulls the most urgent open item of that ca
   addBacklog(p, 'urgent', 1, 'urgent', id);
   addBacklog(p, 'elsewhere', 2, 'urgentImportant', id);
   setSlotStatus(p, 'task', 'done', DAY);
+  assert.equal(currentInSlot(p, 1, DAY).id, 'task'); // done stays, UNDO works
+  setSlotStatus(p, 'task', 'pending');
+  assert.equal(currentInSlot(p, 1, DAY).status, 'pending');
+  deleteSlotTask(p, 'task', DAY);
   assert.equal(currentInSlot(p, 1, DAY).text, 'urgent');
   deleteSlotTask(p, 'id-2', DAY);
   assert.equal(currentInSlot(p, 1, DAY).text, 'normal');

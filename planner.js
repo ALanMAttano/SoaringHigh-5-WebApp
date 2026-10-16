@@ -1,8 +1,9 @@
 // Planner rules for the PWA, mirroring src/SoaringHigh5.Core/Planner.cs: five slots (one per category), one task
 // per slot and day, TODO list grouped by category/urgency, day change carries pending tasks over. Pure functions on
 // plain data (no DOM); sync stamps (updatedAt) are added by merge.stamp() from the diff, so edits here sync as usual.
-// Moving a TODO item to today takes it OUT of the list (the task keeps the item's id; a busy slot is swapped back
-// to TODO); deleting/finishing today's task auto-fills the slot with the most urgent open item of that category.
+// Moving a TODO item to today takes it OUT of the list (the task keeps the item's id; with all 5 busy the least
+// important pending task goes back to TODO); deleting today's task auto-fills the slot with the most urgent open item
+// of that category (done does not).
 // tests/today-fixtures.json is checked by both the node and the C# tests (parity).
 import { CATEGORY_COUNT, URGENCIES, normalizeSlotOrder } from './merge.js';
 
@@ -122,16 +123,14 @@ function autoFill(p, slot, day) {
 const linkedItem = (p, t) => (t.backlogId ? p.backlog.find((b) => b.id === t.backlogId) ?? null : null);
 
 /** Done/cancelled/pending. A linked TODO item follows like on the desktop: done closes it, undo/cancel reopens it.
- * Finishing today's task auto-fills its slot. */
-export function setSlotStatus(p, id, status, day) {
+ * Done keeps the task in its slot (no auto-fill), so UNDO works. */
+export function setSlotStatus(p, id, status) {
   const t = p.slotTasks.find((x) => x.id === id);
   if (!t) return false;
-  const freesToday = status === 'done' && t.status !== 'done' && isTodaysCurrent(p, t, day);
   t.status = status;
   const item = linkedItem(p, t);
   if (item && status === 'done') item.status = 'done';
   else if (item && item.status === 'done') item.status = 'open'; // un-ticked or cancelled today
-  if (freesToday) autoFill(p, t.slot, day);
   return true;
 }
 
@@ -223,23 +222,43 @@ export function backlogByUrgency(p) {
 }
 
 /**
- * Moves an open TODO item into a slot as today's task (desktop Planner.Assign): the item leaves the TODO list and
- * the task takes its id, so sync sees one task, never a copy. A pending task in the slot is swapped back to TODO
- * (own id, category = slot, urgency). Returns 'moved' | 'swapped' | 'alreadyThere' | 'notOpen' | 'notFound' | 'invalidSlot'.
+ * Moves an open TODO item into today's 5 (desktop Planner.Assign / SendToToday): the item leaves the TODO list and the
+ * task takes its id, so sync sees one task, never a copy. It lands in `preferred` if free, else its own category's
+ * slot, else the first free slot; with all 5 busy the least important pending task goes back to TODO (own id,
+ * category = slot, urgency) and the item takes its slot.
+ * Returns { result: 'moved' | 'swapped' | 'alreadyThere' | 'notOpen' | 'notFound' | 'invalidSlot', slot? }.
  */
-export function moveToSlot(p, itemId, slot, day) {
-  if (!isValidSlot(slot)) return 'invalidSlot';
+export function sendToToday(p, itemId, day, preferred = null) {
+  if (preferred !== null && !isValidSlot(preferred)) return { result: 'invalidSlot' };
   const item = p.backlog.find((b) => b.id === itemId);
-  if (!item) return 'notFound';
-  if (item.status !== 'open') return 'notOpen';
-  const current = currentInSlot(p, slot, day);
-  const busy = current?.status === 'pending';
-  if (busy && current.backlogId === itemId) return 'alreadyThere';
+  if (!item) return { result: 'notFound' };
+  if (item.status !== 'open') return { result: 'notOpen' };
+  const atPreferred = preferred === null ? null : currentInSlot(p, preferred, day);
+  if (atPreferred?.status === 'pending' && atPreferred.backlogId === itemId) return { result: 'alreadyThere' };
   const legacyCopy = todayTaskFor(p, itemId, day); // linked copy made by v2.31 or older
   if (legacyCopy) remove(p.slotTasks, legacyCopy);
-  if (busy) returnToBacklog(p, current);
+  const slot = targetSlotFor(p, item, preferred, day);
+  const displaced = currentInSlot(p, slot, day);
+  const swapped = displaced?.status === 'pending';
+  if (swapped) returnToBacklog(p, displaced);
   moveIntoSlot(p, item, slot, day);
-  return busy ? 'swapped' : 'moved';
+  return { result: swapped ? 'swapped' : 'moved', slot };
+}
+
+/** Where a TODO item moving into today lands (desktop Planner.TargetSlotFor). */
+export function targetSlotFor(p, item, preferred, day) {
+  if (preferred !== null && isSlotFree(p, preferred, day)) return preferred;
+  if (isSlotFree(p, item.category, day)) return item.category;
+  return freeSlots(p, day)[0] ?? leastImportantPending(p, day)?.slot ?? item.category;
+}
+
+/** Today's pending task that makes room when all 5 are busy: lowest urgency; ties: the oldest = earliest in the
+ * stored task list (tasks are appended when created; carry-over keeps the place). Desktop LeastImportantPending. */
+export function leastImportantPending(p, day) {
+  return p.slotTasks.map((t, index) => ({ t, index }))
+    .filter(({ t }) => t.status === 'pending' && isTodaysCurrent(p, t, day))
+    .sort((a, b) => URGENCIES.indexOf(b.t.urgency) - URGENCIES.indexOf(a.t.urgency) || a.index - b.index)
+    .map(({ t }) => t)[0] ?? null;
 }
 
 /** Takes the item out of the TODO list and makes it today's task in the slot, with the item's id. */
@@ -247,19 +266,6 @@ function moveIntoSlot(p, item, slot, day) {
   remove(p.backlog, item);
   for (const t of p.slotTasks) if (t.backlogId === item.id) t.backlogId = null;
   placeInSlot(p, { id: item.id, date: day, slot, text: item.text, urgency: item.urgency, status: 'pending', backlogId: null });
-}
-
-/**
- * The -> HOY button (desktop Planner.SendToToday): the item's own slot when free, else the first free slot in the
- * user's order, else a swap with its own slot. Returns { result, slot? } with moveToSlot's results.
- */
-export function sendToToday(p, itemId, day) {
-  const item = p.backlog.find((b) => b.id === itemId);
-  if (!item) return { result: 'notFound' };
-  const free = freeSlots(p, day);
-  const slot = free.includes(item.category) ? item.category : free[0] ?? item.category;
-  const result = moveToSlot(p, itemId, slot, day);
-  return ['moved', 'swapped'].includes(result) ? { result, slot } : { result };
 }
 
 /** HOY reorder (long-press drag, desktop SlotOrdering.Move): puts a slot at display row newIndex; false when nothing changes. */

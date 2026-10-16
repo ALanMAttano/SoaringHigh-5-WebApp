@@ -314,7 +314,7 @@ function moveSlotToRow(from, to) {
 }
 
 function markStatus(id, status) {
-  setSlotStatus(state.planner, id, status, localDay());
+  setSlotStatus(state.planner, id, status);
   persist();
 }
 
