@@ -2,6 +2,7 @@
   "name": "SoaringHigh-5",
   "short_name": "SH-5",
   "description": "Five tasks a day, synced with the SoaringHigh-5 Windows app through Google Drive.",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

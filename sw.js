@@ -1,7 +1,7 @@
 // App-shell cache: the PWA opens offline. Google sign-in and Drive calls always go to the network.
-const CACHE = 'sh5-pwa-v2.41';
+const CACHE = 'sh5-pwa-v2.43';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'planner.js', 'merge.js', 'engine.js', 'sync.js', 'i18n.js', 'config.js', 'color.js', 'settings.js', 'settings-view.js', 'dom.js', 'reorder.js', 'app-info.js',
-  'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
+  'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -14,6 +14,8 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
+  // The manifest is never cached: Chrome must always see the current one (orientation, icons) to update the WebAPK.
+  if (url.pathname.endsWith('/manifest.json')) return;
   // Network first (so updates arrive), cache as the offline fallback.
   e.respondWith(fetch(e.request).then((r) => {
     const copy = r.clone();

@@ -44,3 +44,15 @@ test('v2.39 tap targets, neon glow and reduced-motion pulse', () => {
   assert.match(css, /prefers-reduced-motion: reduce\) \{ body\.glow-pulse[^{]*\{ animation: none/);
   assert.match(css, /box-shadow: 0 0 6px color-mix\(in srgb, var\(--neon\)/);
 });
+
+test('v2.43 rotation: manifest fresh and stable identity, nothing locks portrait', () => {
+  const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+  const manifest = JSON.parse(read('manifest.json'));
+  assert.equal(manifest.id, './'); // same as the implicit id (start_url): installed apps keep their identity
+  assert.equal(manifest.orientation, 'any');
+  const sw = read('sw.js');
+  assert.ok(!/'manifest\.json'/.test(sw), 'manifest must not be precached');
+  assert.match(sw, /endsWith\('\/manifest\.json'\)\) return;/);
+  assert.match(read('index.html'), new RegExp(`manifest\\.json\\?v=${PWA_VERSION.slice(1)}`));
+  for (const f of ['app.js', 'reorder.js', 'styles.css', 'index.html']) assert.ok(!/orientation\.lock|orientation:\s*portrait/.test(read(f)), f);
+});
