@@ -50,15 +50,24 @@ export function addToSlot(p, slot, text, urgency, day, newId = () => crypto.rand
 }
 
 /**
- * HOY add form: a new task in the chosen category's slot when free, else the first free slot (the 5-task limit
- * holds). Returns { result: 'added' | 'empty' | 'noFreeSlot' | 'invalidCategory', slot? }.
+ * HOY add form (desktop Planner.AddToToday): into the category's place when free; over a pending task only when
+ * strictly more urgent (that task goes back to TODO); otherwise the new task goes to the TODO list.
+ * Returns { result: 'added' | 'swapped' | 'toTodo' | 'empty' | 'invalidCategory', other? } where `other` is the task
+ * that went back (swapped) or kept the place (toTodo).
  */
-export function addToFreeSlot(p, text, urgency, day, preferred, newId = () => crypto.randomUUID()) {
+export function addToToday(p, text, category, urgency, day, newId = () => crypto.randomUUID()) {
+  if (!isValidSlot(category)) return { result: 'invalidCategory' };
   if (!cleanText(text)) return { result: 'empty' };
-  const free = freeSlots(p, day);
-  if (!free.length) return { result: 'noFreeSlot' };
-  const slot = free.includes(preferred) ? preferred : free[0];
-  return { result: addToSlot(p, slot, text, urgency, day, newId), slot };
+  const level = validUrgency(urgency);
+  const current = currentInSlot(p, category, day);
+  const other = current?.status === 'pending' ? current : null;
+  if (other && !outranks(level, other.urgency, 'currentStays')) {
+    addBacklog(p, text, category, level, newId);
+    return { result: 'toTodo', other };
+  }
+  if (other) returnToBacklog(p, other);
+  addToSlot(p, category, text, level, day, newId);
+  return other ? { result: 'swapped', other } : { result: 'added' };
 }
 
 /** Puts a task into its (free) slot, replacing a finished one there. */
@@ -317,9 +326,13 @@ export function undoDelete(p, undo, day) {
   return true;
 }
 
-/** The incoming item wins its slot when it is at least as urgent as the pending task there: on a tie the task
- * already in the slot is the older one, so it goes back (desktop Planner.Outranks). */
-export const outranks = (incoming, current) => URGENCIES.indexOf(incoming) <= URGENCIES.indexOf(current);
+/** The shared placement check (desktop Planner.Outranks): does the incoming task take the place from its pending
+ * task? More urgent always does; a tie follows `tie`: 'incomingWins' (moving a TODO in: the older task there goes
+ * back) or 'currentStays' (typing a new task: the planned one stays). */
+export function outranks(incoming, current, tie = 'incomingWins') {
+  const difference = URGENCIES.indexOf(incoming) - URGENCIES.indexOf(current);
+  return difference < 0 || (difference === 0 && tie === 'incomingWins');
+}
 
 /**
  * The -> HOY button (desktop Planner.SendToToday): the item goes to its OWN category's slot and leaves the TODO list;

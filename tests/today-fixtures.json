@@ -1,6 +1,6 @@
 {
  "day": "2026-10-16",
- "note": "Wish #7/#8 rules (v2.39): checked by pwa/tests/today-parity.test.js and TodayParityTests.cs",
+ "note": "Wish #7/#8 + add rules (v2.41): checked by pwa/tests/today-parity.test.js and TodayParityTests.cs",
  "cases": [
   {
    "name": "done keeps the task (no auto-fill)",
@@ -933,6 +933,202 @@
      null
     ],
     "backlog": []
+   }
+  },
+  {
+   "name": "add: free place takes it",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 2,
+      "text": "task 1",
+      "urgency": "normal",
+      "status": "done",
+      "backlogId": null
+     }
+    ],
+    "backlog": [],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "add",
+    "id": "00000000-0000-0000-0000-000000000050",
+    "category": 2,
+    "urgency": "wish"
+   },
+   "expect": {
+    "result": "added",
+    "slots": [
+     null,
+     null,
+     "00000000-0000-0000-0000-000000000050:pending",
+     null,
+     null
+    ],
+    "backlog": []
+   }
+  },
+  {
+   "name": "add: strictly more urgent swaps",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 2,
+      "text": "task 1",
+      "urgency": "normal",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 2,
+      "urgency": "wish",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 10
+     }
+    ],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "add",
+    "id": "00000000-0000-0000-0000-000000000050",
+    "category": 2,
+    "urgency": "important"
+   },
+   "expect": {
+    "result": "swapped",
+    "slots": [
+     null,
+     null,
+     "00000000-0000-0000-0000-000000000050:pending",
+     null,
+     null
+    ],
+    "backlog": [
+     "00000000-0000-0000-0000-000000000010:2:wish:open",
+     "00000000-0000-0000-0000-000000000001:2:normal:open"
+    ]
+   }
+  },
+  {
+   "name": "add: tie goes to TODO",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 2,
+      "text": "task 1",
+      "urgency": "important",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [
+     {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "text": "item 10",
+      "category": 2,
+      "urgency": "wish",
+      "status": "open",
+      "categoryOrder": 0,
+      "urgencyOrder": 10
+     }
+    ],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "add",
+    "id": "00000000-0000-0000-0000-000000000050",
+    "category": 2,
+    "urgency": "important"
+   },
+   "expect": {
+    "result": "toTodo",
+    "slots": [
+     null,
+     null,
+     "00000000-0000-0000-0000-000000000001:pending",
+     null,
+     null
+    ],
+    "backlog": [
+     "00000000-0000-0000-0000-000000000010:2:wish:open",
+     "00000000-0000-0000-0000-000000000050:2:important:open"
+    ]
+   }
+  },
+  {
+   "name": "add: less urgent goes to TODO",
+   "planner": {
+    "slotTasks": [
+     {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "date": "2026-10-16",
+      "slot": 0,
+      "text": "task 1",
+      "urgency": "urgentImportant",
+      "status": "pending",
+      "backlogId": null
+     }
+    ],
+    "backlog": [],
+    "slotOrder": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "lastRolloverDate": "2026-10-16"
+   },
+   "op": {
+    "kind": "add",
+    "id": "00000000-0000-0000-0000-000000000050",
+    "category": 0,
+    "urgency": "urgent"
+   },
+   "expect": {
+    "result": "toTodo",
+    "slots": [
+     "00000000-0000-0000-0000-000000000001:pending",
+     null,
+     null,
+     null,
+     null
+    ],
+    "backlog": [
+     "00000000-0000-0000-0000-000000000050:0:urgent:open"
+    ]
    }
   }
  ]

@@ -2,7 +2,7 @@
 import { GOOGLE_CLIENT_ID } from './config.js';
 import { CATEGORY_COUNT, URGENCIES, stamp, toPlanner, parseDocument } from './merge.js';
 import {
-  MAX_TEXT_LENGTH, addBacklog, addToFreeSlot, addToSlot, backlogByCategory, backlogByUrgency, completeBacklog, currentInSlot, deleteBacklog, deleteSlotTask, emptyPlanner,
+  MAX_TEXT_LENGTH, addBacklog, addToSlot, addToToday, backlogByCategory, backlogByUrgency, completeBacklog, currentInSlot, deleteBacklog, deleteSlotTask, emptyPlanner,
   displaySlots, doneEntries, ensureRollover, isSlotFree, localDay, reopenBacklog, reorderWithinUrgency, restoreDone, sendToToday, setSlotStatus,
   todayTaskFor, undoDelete, updateBacklog, updateSlotTask,
 } from './planner.js';
@@ -261,7 +261,7 @@ function deleteWithUndo(remove) {
 
 function renderSlots() {
   const today = localDay();
-  refreshAddForm('today', t().placeholder, busyFor(null));
+  refreshAddForm('today', t().placeholder); // every category: a busy place is decided by urgency (addToToday)
   $('slots').replaceChildren(...displaySlots(state.planner, today).map((slot) => {
     const task = currentInSlot(state.planner, slot, today);
     if (task?.status === 'pending' && editing.is('task', task.id)) return editorRow(taskEditor(task, busyFor(task.slot)));
@@ -414,13 +414,16 @@ function refreshAddForm(prefix, placeholder, busyCategory) {
   urgency.replaceWith(urgencySelect(urgency.id, urgency.value || 'normal'));
 }
 
+/** HOY add form: same rule as the desktop main window; a short notice says where the task went. */
 function addTaskToToday(text, category, urgency) {
-  const { result, slot } = addToFreeSlot(state.planner, text, urgency, localDay(), category);
-  if (result === 'added' && slot !== category) showNotice(format(t().sent, categoryName(slot)));
-  return result;
+  const { result, other } = addToToday(state.planner, text, category, urgency, localDay());
+  const notice = { added: t().sent, swapped: t().addSwapped, toTodo: t().addToTodo }[result];
+  if (!notice) return result;
+  showNotice(format(notice, categoryName(category), other?.text ?? ''));
+  return 'added';
 }
 
-/** Planner refusals as a short notice ('empty', 'slotBusy', 'noFreeSlot', 'alreadyThere'); a task or item that
+/** Planner refusals as a short notice ('empty', 'slotBusy', 'alreadyThere'); a task or item that
  * vanished meanwhile (sync, day change) just closes the editor. */
 function showResult(result) {
   if (result === 'notFound') { editing.none(); render(); return; }

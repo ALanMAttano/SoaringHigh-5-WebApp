@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { merge, stamp, toPlanner } from '../merge.js';
 import {
-  addBacklog, addToFreeSlot, addToSlot, backlogByCategory, backlogByUrgency, completeBacklog, openBacklog, deleteBacklog, deleteSlotTask, emptyPlanner, freeSlots,
+  addBacklog, addToSlot, addToToday, backlogByCategory, backlogByUrgency, completeBacklog, openBacklog, deleteBacklog, deleteSlotTask, emptyPlanner, freeSlots,
   currentInSlot, displaySlots, outranks, reorderWithinUrgency, DONE_VISIBLE_MS, DONE_RETENTION_MS, doneEntries, purgeOldDone,
   reopenBacklog, restoreDone, undoDelete, sendToToday, setSlotStatus, updateBacklog, updateSlotTask,
 } from '../planner.js';
@@ -231,15 +231,31 @@ test('TODO tab: all open items in creation order, whatever their urgency or cate
   assert.deepEqual(openBacklog(p).map((b) => b.text), ['first!', 'second']);
 });
 
-test('HOY add form: chosen category when free, else the first free slot, refused when all 5 are full', () => {
+test('HOY add form: into its own place when free, swap only when strictly more urgent, else to TODO', () => {
   const p = emptyPlanner();
   const id = ids();
-  assert.deepEqual(addToFreeSlot(p, 'bank', 'urgent', DAY, 2, id), { result: 'added', slot: 2 });
-  assert.deepEqual(addToFreeSlot(p, 'gym', 'normal', DAY, 2, id), { result: 'added', slot: 0 });
-  assert.deepEqual(addToFreeSlot(p, '  ', 'normal', DAY, 1, id), { result: 'empty' });
-  const full = fullDay();
-  assert.deepEqual(addToFreeSlot(full, 'sixth', 'normal', DAY, 0), { result: 'noFreeSlot' });
-  assert.equal(full.slotTasks.length, 5);
+  assert.deepEqual(addToToday(p, 'bank', 2, 'normal', DAY, id), { result: 'added' });
+  const tie = addToToday(p, 'tie', 2, 'normal', DAY, id);
+  assert.equal(tie.result, 'toTodo');
+  assert.equal(tie.other.text, 'bank');
+  assert.equal(addToToday(p, 'less', 2, 'wish', DAY, id).result, 'toTodo');
+  const win = addToToday(p, 'urgent one', 2, 'urgent', DAY, id);
+  assert.equal(win.result, 'swapped');
+  assert.equal(win.other.text, 'bank');
+  assert.equal(currentInSlot(p, 2, DAY).text, 'urgent one');
+  assert.deepEqual(p.backlog.map((b) => [b.id, b.text, b.category, b.urgency, b.status]),
+    [['id-2', 'tie', 2, 'normal', 'open'], ['id-3', 'less', 2, 'wish', 'open'], ['id-1', 'bank', 2, 'normal', 'open']]);
+  setSlotStatus(p, 'id-4', 'done');
+  assert.deepEqual(addToToday(p, 'after done', 2, 'wish', DAY, id), { result: 'added' }); // a done task frees the place
+  assert.deepEqual(addToToday(p, '  ', 1, 'normal', DAY, id), { result: 'empty' });
+  assert.deepEqual(addToToday(p, 'x', 9, 'normal', DAY, id), { result: 'invalidCategory' });
+});
+
+test('placement tie rule: moving a TODO in wins a tie, typing a new task does not', () => {
+  assert.equal(outranks('normal', 'normal'), true);
+  assert.equal(outranks('normal', 'normal', 'currentStays'), false);
+  assert.equal(outranks('urgent', 'normal', 'currentStays'), true);
+  assert.equal(outranks('wish', 'normal'), false);
 });
 
 test('TODO tab grouped by category in slot order, most urgent first inside a group, open items only', () => {

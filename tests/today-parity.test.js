@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { currentInSlot, deleteSlotTask, sendToToday, setSlotStatus, undoDelete } from '../planner.js';
+import { addToToday, currentInSlot, deleteSlotTask, sendToToday, setSlotStatus, undoDelete } from '../planner.js';
 
 const { day, cases } = JSON.parse(readFileSync(new URL('./today-fixtures.json', import.meta.url)));
 
@@ -12,6 +12,7 @@ function run(p, op) {
     case 'done': return String(setSlotStatus(p, op.id, 'done'));
     case 'cancel': return String(setSlotStatus(p, op.id, 'cancelled'));
     case 'delete': return String(Boolean(deleteSlotTask(p, op.id, day)));
+    case 'add': return addToToday(p, 'new', op.category, op.urgency, day, () => op.id).result;
     case 'deleteUndo': return String(undoDelete(p, deleteSlotTask(p, op.id, day), day));
     default: { const r = sendToToday(p, op.id, day); return `${r.result}@${r.slot}`; }
   }
