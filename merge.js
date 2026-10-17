@@ -28,8 +28,8 @@ export function normalizeSlotOrder(order) {
   return seen;
 }
 
-const TASK_FIELDS = ['deleted', 'date', 'slot', 'text', 'urgency', 'status', 'backlogId'];
-const ITEM_FIELDS = ['deleted', 'text', 'category', 'urgency', 'status', 'categoryOrder', 'urgencyOrder'];
+const TASK_FIELDS = ['deleted', 'date', 'slot', 'text', 'urgency', 'status', 'backlogId', 'doneAt'];
+const ITEM_FIELDS = ['deleted', 'text', 'category', 'urgency', 'status', 'categoryOrder', 'urgencyOrder', 'doneAt'];
 const same = (fields) => (a, b) => fields.every((f) => (a[f] ?? null) === (b[f] ?? null));
 export const sameTask = same(TASK_FIELDS);
 export const sameItem = same(ITEM_FIELDS);

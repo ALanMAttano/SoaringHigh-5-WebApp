@@ -34,5 +34,13 @@ test('TODO tab rows without a category label have a layout in portrait and lands
   assert.equal(rules.length, 2);
   assert.ok(rules.every((r) => !/grid-template-areas:[^;]*\bcat\b/.test(r)));
   const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
-  assert.match(app, /category: state\.view === 'todo' \? null : item\.category/);
+  assert.match(app, /category = state\.view === 'todo' \? null : item\.category/);
+});
+
+test('v2.39 tap targets, neon glow and reduced-motion pulse', () => {
+  const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.task-row \.btn \{[^}]*min-height: 44px[^}]*white-space: nowrap/);
+  assert.match(css, /body\.glow-pulse [^{]*\{ animation: glow-pulse/);
+  assert.match(css, /prefers-reduced-motion: reduce\) \{ body\.glow-pulse[^{]*\{ animation: none/);
+  assert.match(css, /box-shadow: 0 0 6px color-mix\(in srgb, var\(--neon\)/);
 });

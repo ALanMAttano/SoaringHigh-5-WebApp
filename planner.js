@@ -93,14 +93,18 @@ export function updateSlotTask(p, id, text, urgency, slot) {
   return 'updated';
 }
 
-/** Removes a daily task (a linked TODO item stays as it is); today's slot is then auto-filled. */
+/**
+ * Removes a daily task (a linked TODO item stays as it is); today's slot is then auto-filled. Returns an undo record
+ * for undoDelete (truthy), or false when the task is gone.
+ */
 export function deleteSlotTask(p, id, day) {
   const t = p.slotTasks.find((x) => x.id === id);
   if (!t) return false;
   const freesToday = isTodaysCurrent(p, t, day);
+  const taskIndex = p.slotTasks.indexOf(t);
   remove(p.slotTasks, t);
-  if (freesToday) autoFill(p, t.slot, day);
-  return true;
+  const filled = freesToday ? autoFill(p, t.slot, day) : null;
+  return { task: t, taskIndex, item: filled?.item ?? null, itemIndex: filled?.index ?? -1 };
 }
 
 const isTodaysCurrent = (p, t, day) => t.date === day && currentInSlot(p, t.slot, day) === t;
@@ -115,23 +119,33 @@ export function nextAutoFillCandidate(p, slot, day) {
     .map(({ item }) => item)[0] ?? null;
 }
 
+/** Fills a freed slot; returns { item, index } (its former TODO position, for undo) or null. */
 function autoFill(p, slot, day) {
   const next = isSlotFree(p, slot, day) ? nextAutoFillCandidate(p, slot, day) : null;
-  if (next) moveIntoSlot(p, next, slot, day);
+  if (!next) return null;
+  const index = p.backlog.indexOf(next);
+  moveIntoSlot(p, next, slot, day);
+  return { item: next, index };
 }
 
 const linkedItem = (p, t) => (t.backlogId ? p.backlog.find((b) => b.id === t.backlogId) ?? null : null);
 
 /** Done/cancelled/pending. A linked TODO item follows like on the desktop: done closes it, undo/cancel reopens it.
  * Done keeps the task in its slot (no auto-fill), so UNDO works. */
-export function setSlotStatus(p, id, status) {
+export function setSlotStatus(p, id, status, now = new Date()) {
   const t = p.slotTasks.find((x) => x.id === id);
   if (!t) return false;
-  t.status = status;
+  setStatus(t, status, now);
   const item = linkedItem(p, t);
-  if (item && status === 'done') item.status = 'done';
-  else if (item && item.status === 'done') item.status = 'open'; // un-ticked or cancelled today
+  if (item && status === 'done') setStatus(item, 'done', now);
+  else if (item && item.status === 'done') setStatus(item, 'open', now); // un-ticked or cancelled today
   return true;
+}
+
+/** Status plus the DONE timestamp (ISO, UTC), kept only while done (desktop SetTaskStatus/SetItemStatus). */
+function setStatus(x, status, now) {
+  x.status = status;
+  x.doneAt = status === 'done' ? x.doneAt ?? new Date(now).toISOString() : null;
 }
 
 export function addBacklog(p, text, category, urgency, newId = () => crypto.randomUUID()) {
@@ -186,39 +200,113 @@ export function updateBacklog(p, id, text, category, urgency, day) {
 }
 
 /** Ticks a TODO item done; today's pending task made from it is closed too (desktop SetBacklogStatus). */
-export function completeBacklog(p, id, day) {
+export function completeBacklog(p, id, day, now = new Date()) {
   const item = p.backlog.find((b) => b.id === id);
   if (!item) return false;
-  item.status = 'done';
   const today = todayTaskFor(p, id, day);
-  if (today) today.status = 'done';
+  setStatus(item, 'done', now);
+  if (today) setStatus(today, 'done', now);
   return true;
 }
 
-/** Deletes a TODO item; daily tasks made from it stay, unlinked. */
+/** UNDO / restore of a done TODO item: open again; today's closed task made from it reopens (desktop SetBacklogStatus). */
+export function reopenBacklog(p, id, day) {
+  const item = p.backlog.find((b) => b.id === id);
+  if (!item || item.status === 'open') return false;
+  setStatus(item, 'open');
+  const today = p.slotTasks.find((t) => t.backlogId === id && isTodaysCurrent(p, t, day));
+  if (today && today.status !== 'pending') setStatus(today, 'pending');
+  return true;
+}
+
+/** Deletes a TODO item; daily tasks made from it stay, unlinked. Returns an undo record (truthy) or false. */
 export function deleteBacklog(p, id) {
   const item = p.backlog.find((b) => b.id === id);
   if (!item) return false;
+  const itemIndex = p.backlog.indexOf(item);
   remove(p.backlog, item);
   for (const t of p.slotTasks) if (t.backlogId === id) t.backlogId = null;
-  return true;
+  return { task: null, taskIndex: -1, item, itemIndex };
 }
 
 /** Open TODO items in creation order (the order they were added to the list). */
 export const openBacklog = (p) => p.backlog.filter((b) => b.status === 'open');
 
-/** Open TODO items grouped by category (in the user's slot order), saved order inside a group; empty groups left out. */
-export function backlogByCategory(p) {
-  return normalizeSlotOrder(p.slotOrder).map((category) => ({ category,
-    items: openBacklog(p).filter((b) => b.category === category).sort((a, b) => (a.categoryOrder ?? 0) - (b.categoryOrder ?? 0)) }))
+/** Done TODO items stay visible (struck through, with UNDO) this long in the TODO and URGENCY tabs. */
+export const DONE_VISIBLE_MS = 48 * 3600 * 1000;
+/** Done TODO items are removed this long after they were ticked (desktop Planner.DoneRetention). */
+export const DONE_RETENTION_MS = 30 * 24 * 3600 * 1000;
+
+const isRecentlyDone = (b, now) => b.status === 'done' && b.doneAt && now - Date.parse(b.doneAt) < DONE_VISIBLE_MS;
+
+/** Items listed in the TODO tabs: open ones, then the ones done in the last 48 h. */
+const listedBacklog = (p, now) => [...openBacklog(p), ...p.backlog.filter((b) => isRecentlyDone(b, now))];
+
+/** Groups in `keys` order; open items first in saved order, then recently done ones; empty groups left out. */
+function groupBacklog(p, now, keys, keyOf, orderKey) {
+  const rank = (b) => (b.status === 'open' ? 0 : 1);
+  return keys.map((key) => ({ key,
+    items: listedBacklog(p, now).filter((b) => keyOf(b) === key).sort((a, b) => rank(a) - rank(b) || (a[orderKey] ?? 0) - (b[orderKey] ?? 0)) }))
     .filter((g) => g.items.length);
 }
 
-/** Open TODO items grouped by urgency, most urgent first; inside a group in saved order. Empty groups are left out. */
-export function backlogByUrgency(p) {
-  return URGENCIES.map((urgency) => ({ urgency,
-    items: openBacklog(p).filter((b) => b.urgency === urgency).sort((a, b) => (a.urgencyOrder ?? 0) - (b.urgencyOrder ?? 0)) }))
-    .filter((g) => g.items.length);
+/** TODO tab: by category (in the user's slot order). Done items from the last 48 h are included (struck through). */
+export function backlogByCategory(p, now = Date.now()) {
+  return groupBacklog(p, now, normalizeSlotOrder(p.slotOrder), (b) => b.category, 'categoryOrder')
+    .map(({ key, items }) => ({ category: key, items }));
+}
+
+/** URGENCY tab: by urgency, most urgent first. Done items from the last 48 h are included (struck through). */
+export function backlogByUrgency(p, now = Date.now()) {
+  return groupBacklog(p, now, URGENCIES, (b) => b.urgency, 'urgencyOrder')
+    .map(({ key, items }) => ({ urgency: key, items }));
+}
+
+/**
+ * DONE tab (desktop Planner.DoneEntries): today's done tasks still in their slot and done TODO items, newest first;
+ * items without a timestamp (finished before v2.39) last. Entries: { id, isToday, text, category, urgency, doneAt }.
+ */
+export function doneEntries(p, day) {
+  const today = normalizeSlotOrder([]).map((slot) => currentInSlot(p, slot, day)).filter((t) => t?.status === 'done')
+    .map((t) => ({ id: t.id, isToday: true, text: t.text, category: t.slot, urgency: t.urgency, doneAt: t.doneAt ?? null }));
+  const items = p.backlog.filter((b) => b.status === 'done')
+    .map((b) => ({ id: b.id, isToday: false, text: b.text, category: b.category, urgency: b.urgency, doneAt: b.doneAt ?? null }));
+  const time = (e) => (e.doneAt ? Date.parse(e.doneAt) : -Infinity);
+  return [...today, ...items].sort((a, b) => time(b) - time(a));
+}
+
+/** Restores a DONE entry: today's task pending again, a TODO item open again (desktop RestoreDone). */
+export function restoreDone(p, id, day) {
+  const task = p.slotTasks.find((t) => t.id === id && t.status === 'done');
+  if (task) return isTodaysCurrent(p, task, day) && setSlotStatus(p, id, 'pending');
+  return reopenBacklog(p, id, day);
+}
+
+/** Retention: done TODO items older than 30 days are removed; undated ones (pre-v2.39) get a stamp first. */
+export function purgeOldDone(p, now = new Date()) {
+  const at = new Date(now);
+  for (const b of p.backlog) if (b.status === 'done' && !b.doneAt) b.doneAt = at.toISOString();
+  const before = p.backlog.length;
+  p.backlog = p.backlog.filter((b) => !(b.status === 'done' && at - Date.parse(b.doneAt) > DONE_RETENTION_MS));
+  return before - p.backlog.length;
+}
+
+/**
+ * Reverses deleteSlotTask/deleteBacklog (desktop Planner.Undo): the auto-filled item leaves its slot and returns to
+ * the TODO list, the deleted task or item goes back where it was. false (nothing changed) when the task's slot got a
+ * new pending task meanwhile.
+ */
+export function undoDelete(p, undo, day) {
+  const { task, item } = undo;
+  const has = (list, id) => list.some((x) => x.id === id);
+  if (task && !has(p.slotTasks, task.id)) {
+    const current = currentInSlot(p, task.slot, task.date);
+    if (task.date === day && current?.status === 'pending' && current.id !== item?.id) return false;
+  }
+  if (task && item) p.slotTasks = p.slotTasks.filter((t) => !(t.id === item.id && t.status === 'pending'));
+  if (item && !has(p.backlog, item.id) && !has(p.slotTasks, item.id)) p.backlog.splice(Math.min(undo.itemIndex, p.backlog.length), 0, item);
+  if (task && !has(p.slotTasks, task.id)) p.slotTasks.splice(Math.min(undo.taskIndex, p.slotTasks.length), 0, task);
+  return true;
 }
 
 /** The incoming item wins its slot when it is at least as urgent as the pending task there: on a tie the task
@@ -294,8 +382,9 @@ export function reorderWithinUrgency(p, day, from, to) {
 
 /** Day change: the newest unfinished task of each slot moves to today if today's slot is free, other
  * unfinished ones go back to the TODO list; finished past tasks are dropped. Returns {carried, returned}. */
-export function ensureRollover(p, today) {
+export function ensureRollover(p, today, now = new Date()) {
   const result = { carried: 0, returned: 0 };
+  purgeOldDone(p, now);
   if (p.lastRolloverDate === today) {
     p.slotTasks = p.slotTasks.filter((t) => t.date >= today);
     return result;

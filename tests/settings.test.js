@@ -13,7 +13,7 @@ function memoryStorage(initial = {}) {
 }
 
 test('defaults: follow the phone language, desktop default tuning, default names and colours', () => {
-  assert.deepEqual(defaultSettings(), { language: null, hue: 0, saturation: 100, categoryNames: null, categoryColors: [null, null, null, null, null] });
+  assert.deepEqual(defaultSettings(), { language: null, hue: 0, saturation: 100, categoryNames: null, categoryColors: [null, null, null, null, null], glowPulse: false });
   assert.equal(categoryColor(defaultSettings(), 1), '#FF4FD8');
 });
 
@@ -23,7 +23,7 @@ test('settings persist and load back; bad values are clamped or dropped', () => 
   s = setCategoryColor(renameCategory(s, 2, '  Hogar  '), 4, '#12ab34');
   saveSettings(storage, s);
   assert.deepEqual(loadSettings(storage), { language: 'it', hue: 45, saturation: 60,
-    categoryNames: [null, null, 'Hogar', null, null], categoryColors: [null, null, null, null, '#12AB34'] });
+    categoryNames: [null, null, 'Hogar', null, null], categoryColors: [null, null, null, null, '#12AB34'], glowPulse: false });
   storage.setItem(SETTINGS_KEY, JSON.stringify({ language: 'de', hue: 999, saturation: 1, categoryColors: ['red', 5] }));
   assert.deepEqual(loadSettings(storage), { ...defaultSettings(), hue: 180, saturation: 35 });
   storage.setItem(SETTINGS_KEY, '{not json');
@@ -70,4 +70,9 @@ test('category colours are local only: never in the sync document', () => {
   const s = setCategoryColor(defaultSettings(), 0, '#FFFFFF');
   const doc = stamp(emptyPlanner(), null, T, 'phone', categoryNamesForSync(s));
   assert.ok(!JSON.stringify(doc).includes('FFFFFF'));
+});
+
+test('glow pulse is off by default and only an explicit true turns it on', () => {
+  assert.equal(normalizeSettings({ glowPulse: true }).glowPulse, true);
+  assert.equal(normalizeSettings({ glowPulse: 'yes' }).glowPulse, false);
 });

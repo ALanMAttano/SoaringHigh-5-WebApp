@@ -36,7 +36,9 @@ function appearanceRows(ctx) {
   const preview = () => ctx.previewTuning(hue.value(), saturation.value());
   const commit = () => ctx.update({ ...settings, hue: hue.value(), saturation: saturation.value() }, { rerender: false });
   for (const s of [hue, saturation]) { s.input.addEventListener('input', preview); s.input.addEventListener('change', commit); }
-  return [row(t.language, tabs), row(t.hue, hue.node), row(t.saturation, saturation.node),
+  const pulse = el('div', { className: 'choice' }, ...[[false, t.off], [true, t.on]].map(([on, name]) =>
+    button(name, () => ctx.update({ ...settings, glowPulse: on }), 'tab' + (settings.glowPulse === on ? ' active' : ''))));
+  return [row(t.language, tabs), row(t.hue, hue.node), row(t.saturation, saturation.node), row(t.glowPulse, pulse),
     row('', button(t.resetColors, () => ctx.update({ ...settings, hue: 0, saturation: 100 })))];
 }
 

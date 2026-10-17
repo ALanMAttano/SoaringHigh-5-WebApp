@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { merge, stamp, toPlanner } from '../merge.js';
 import {
   addBacklog, addToFreeSlot, addToSlot, backlogByCategory, backlogByUrgency, completeBacklog, openBacklog, deleteBacklog, deleteSlotTask, emptyPlanner, freeSlots,
-  currentInSlot, displaySlots, outranks, reorderWithinUrgency, sendToToday, setSlotStatus, updateBacklog, updateSlotTask,
+  currentInSlot, displaySlots, outranks, reorderWithinUrgency, DONE_VISIBLE_MS, DONE_RETENTION_MS, doneEntries, purgeOldDone,
+  reopenBacklog, restoreDone, undoDelete, sendToToday, setSlotStatus, updateBacklog, updateSlotTask,
 } from '../planner.js';
 
 const DAY = '2026-10-16';
@@ -249,6 +250,75 @@ test('TODO tab grouped by category in slot order, saved order inside a group, op
   addBacklog(p, 'b3', 3, 'normal', id);
   addBacklog(p, 'c0', 0, 'urgentImportant', id);
   addBacklog(p, 'gone', 1, 'normal', id);
-  completeBacklog(p, 'id-4', DAY);
-  assert.deepEqual(backlogByCategory(p).map((g) => [g.category, g.items.map((b) => b.text)]), [[3, ['b3']], [0, ['a0', 'c0']]]);
+  const t0 = Date.parse('2026-10-16T12:00:00Z');
+  completeBacklog(p, 'id-4', DAY, t0);
+  const later = t0 + DONE_VISIBLE_MS + 1;
+  assert.deepEqual(backlogByCategory(p, later).map((g) => [g.category, g.items.map((b) => b.text)]), [[3, ['b3']], [0, ['a0', 'c0']]]);
+});
+
+test('done TODO items stay listed (after the open ones) for 48 h, then leave the TODO tabs; UNDO reopens', () => {
+  const p = emptyPlanner();
+  const id = ids();
+  addBacklog(p, 'done one', 0, 'urgent', id);
+  addBacklog(p, 'open one', 0, 'urgent', id);
+  const t0 = Date.parse('2026-10-16T12:00:00Z');
+  completeBacklog(p, 'id-1', DAY, t0);
+  assert.equal(p.backlog[0].doneAt, '2026-10-16T12:00:00.000Z');
+  assert.deepEqual(backlogByUrgency(p, t0 + 3600e3)[0].items.map((b) => [b.text, b.status]), [['open one', 'open'], ['done one', 'done']]);
+  assert.deepEqual(backlogByCategory(p, t0 + DONE_VISIBLE_MS + 1)[0].items.map((b) => b.text), ['open one']);
+  assert.ok(reopenBacklog(p, 'id-1', DAY));
+  assert.deepEqual([p.backlog[0].status, p.backlog[0].doneAt], ['open', null]);
+});
+
+test('DONE tab: today\'s done tasks and done TODO items, newest first; restore brings them back', () => {
+  const p = emptyPlanner();
+  addBacklog(p, 'todo', 1, 'normal', () => 'item');
+  completeBacklog(p, 'item', DAY, Date.parse('2026-10-16T08:00:00Z'));
+  addToSlot(p, 2, 'slot', 'normal', DAY, () => 'task');
+  setSlotStatus(p, 'task', 'done', Date.parse('2026-10-16T09:00:00Z'));
+  assert.deepEqual(doneEntries(p, DAY).map((e) => [e.id, e.isToday]), [['task', true], ['item', false]]);
+  assert.ok(restoreDone(p, 'task', DAY));
+  assert.ok(restoreDone(p, 'item', DAY));
+  assert.deepEqual(doneEntries(p, DAY), []);
+  assert.equal(currentInSlot(p, 2, DAY).status, 'pending');
+});
+
+test('retention: done TODO items go 30 days after DONE; undated ones get a stamp first', () => {
+  const p = emptyPlanner();
+  const id = ids();
+  addBacklog(p, 'old', 0, 'normal', id);
+  addBacklog(p, 'legacy', 0, 'normal', id);
+  const t0 = Date.parse('2026-10-16T12:00:00Z');
+  completeBacklog(p, 'id-1', DAY, t0);
+  p.backlog[1].status = 'done';
+  assert.equal(purgeOldDone(p, t0), 0);
+  assert.equal(p.backlog[1].doneAt, '2026-10-16T12:00:00.000Z');
+  assert.equal(purgeOldDone(p, t0 + DONE_RETENTION_MS + 1), 2);
+  assert.deepEqual(p.backlog, []);
+});
+
+test('undo delete: the task comes back and the auto-fill is reversed; a TODO item comes back in place', () => {
+  const p = emptyPlanner();
+  addToSlot(p, 1, 'today', 'normal', DAY, () => 'task');
+  const id = ids();
+  addBacklog(p, 'a', 1, 'normal', id);
+  addBacklog(p, 'filler', 1, 'urgent', id);
+  const undo = deleteSlotTask(p, 'task', DAY);
+  assert.equal(currentInSlot(p, 1, DAY).id, 'id-2');
+  assert.ok(undoDelete(p, undo, DAY));
+  assert.equal(currentInSlot(p, 1, DAY).id, 'task');
+  assert.deepEqual(p.backlog.map((b) => b.id), ['id-1', 'id-2']);
+  assert.equal(p.slotTasks.length, 1);
+  const undoItem = deleteBacklog(p, 'id-1');
+  assert.ok(undoDelete(p, undoItem, DAY));
+  assert.deepEqual(p.backlog.map((b) => b.id), ['id-1', 'id-2']);
+});
+
+test('undo delete fails when the slot got a new pending task meanwhile', () => {
+  const p = emptyPlanner();
+  addToSlot(p, 1, 'today', 'normal', DAY, () => 'task');
+  const undo = deleteSlotTask(p, 'task', DAY);
+  addToSlot(p, 1, 'new', 'normal', DAY, () => 'new');
+  assert.equal(undoDelete(p, undo, DAY), false);
+  assert.equal(currentInSlot(p, 1, DAY).id, 'new');
 });

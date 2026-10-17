@@ -9,7 +9,7 @@ test('every language has the same keys (es, en, it)', () => {
     assert.deepEqual(keys(texts(lang).urgency), keys(texts('es').urgency), lang);
     assert.deepEqual(keys(texts(lang).urgencyGroup), keys(texts('es').urgency), lang);
     assert.equal(texts(lang).categories.length, 5);
-    assert.deepEqual(keys(texts(lang).tabs), ['today', 'todo', 'urgency'], lang);
+    assert.deepEqual(keys(texts(lang).tabs), ['done', 'today', 'todo', 'urgency'], lang);
   }
 });
 
@@ -22,9 +22,9 @@ test('language pick: saved choice, else the phone language, else Spanish', () =>
 });
 
 test('tab names and Settings language abbreviations', () => {
-  assert.deepEqual(Object.values(texts('es').tabs), ['HOY', 'TODO', 'URGENCIA']);
-  assert.deepEqual(Object.values(texts('en').tabs), ['TODAY', 'TODO', 'URGENCY']);
-  assert.deepEqual(Object.values(texts('it').tabs), ['OGGI', 'TODO', 'URGENZA']);
+  assert.deepEqual(Object.values(texts('es').tabs), ['HOY', 'TODO', 'URGENCIA', 'HECHAS']);
+  assert.deepEqual(Object.values(texts('en').tabs), ['TODAY', 'TODO', 'URGENCY', 'DONE']);
+  assert.deepEqual(Object.values(texts('it').tabs), ['OGGI', 'TODO', 'URGENZA', 'FATTI']);
   assert.deepEqual(LANGUAGES.map((l) => LANGUAGE_ABBREVIATIONS[l]), ['ESP', 'ENG', 'ITA']);
   for (const l of LANGUAGES) assert.equal(texts(l).languageAuto, 'AUTO');
 });

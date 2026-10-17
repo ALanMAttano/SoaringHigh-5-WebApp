@@ -32,6 +32,8 @@ input, select { font: inherit; color: var(--neon); background: var(--bg); border
 input { flex: 1 1 180px; }
 input:focus, select:focus { outline: 1px solid var(--neon); }
 .notice { color: var(--amber); border: 1px solid #806200; background: #2A2000; border-radius: 6px; padding: 8px 10px; }
+.notice:not([hidden]) { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.notice .btn { flex: none; white-space: nowrap; }
 footer { margin-top: 16px; }
 .status { color: var(--soft); margin-top: 8px; min-height: 1.3em; }
 .version { color: var(--done); font-size: 12px; margin-top: 10px; }
@@ -83,7 +85,8 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 .task-row .pill, .task-row .pill-space { grid-area: pill; justify-self: start; }
 .task-row .actions { grid-area: actions; display: flex; gap: 8px; align-items: center; }
 .task-row .text { grid-area: text; }
-.task-row .btn { min-height: 40px; padding: 6px 12px; }
+.task-row .btn { min-height: 44px; min-width: 44px; padding: 6px 14px; white-space: nowrap; }
+.task-row .actions { flex-wrap: nowrap; }
 /* Landscape (phone rotated): wider page, one line per task. */
 @media (orientation: landscape) {
   body { max-width: 980px; }
@@ -96,3 +99,17 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 #slots .task-row { touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 #slots.reordering .task-row:not(.dragging) { transition: opacity 0.15s; opacity: 0.7; }
 #slots .task-row.dragging { position: relative; z-index: 2; opacity: 1; box-shadow: 0 0 14px var(--neon, #39ff14); outline: 2px solid var(--neon, #39ff14); }
+
+/* Done rows (TODO/URGENCY for 48 h, DONE tab): struck through and dimmed, no glow. */
+.task-row.is-done { opacity: .55; }
+.task-row.is-done * { text-shadow: none; }
+
+/* Neon bloom: layered glows that follow the tuned colours (currentColor / --neon). Static by default (cheap: no
+   animation); the optional slow pulse (Settings) only animates button/tab shadows and stops for reduced motion. */
+body { text-shadow: 0 0 1px currentColor, 0 0 6px color-mix(in srgb, currentColor 40%, transparent), 0 0 14px color-mix(in srgb, currentColor 16%, transparent); }
+.btn, .tab { box-shadow: 0 0 6px color-mix(in srgb, var(--neon) 28%, transparent), inset 0 0 6px color-mix(in srgb, var(--neon) 10%, transparent); }
+.btn:hover, .btn:active, .tab:hover, .tab.active, .btn:disabled, input, select, .text.empty, .text.finished { text-shadow: none; }
+.btn:disabled { box-shadow: none; }
+@keyframes glow-pulse { 50% { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 55%, transparent), inset 0 0 8px color-mix(in srgb, var(--neon) 18%, transparent); } }
+body.glow-pulse .btn:not(:disabled), body.glow-pulse .tab { animation: glow-pulse 3.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { body.glow-pulse .btn, body.glow-pulse .tab { animation: none; } }

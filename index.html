@@ -22,9 +22,10 @@
     <button id="tab-today" type="button" class="tab active"></button>
     <button id="tab-todo" type="button" class="tab"></button>
     <button id="tab-urgency" type="button" class="tab"></button>
+    <button id="tab-done" type="button" class="tab"></button>
   </nav>
   <main>
-    <p id="notice" class="notice" hidden></p>
+    <div id="notice" class="notice" hidden><span id="notice-text"></span></div>
     <section id="view-today">
       <form id="today-form" class="row-form"></form>
       <ul id="slots" class="list"></ul>
@@ -32,6 +33,10 @@
     <section id="view-todo" hidden>
       <form id="todo-form" class="row-form"></form>
       <ul id="todo-list" class="list"></ul>
+    </section>
+    <section id="view-done" hidden>
+      <ul id="done-list" class="list"></ul>
+      <p id="done-note" class="note"></p>
     </section>
     <section id="view-settings" class="settings" hidden></section>
     <p id="hint" class="hint"></p>

@@ -4,6 +4,7 @@
 //   hue, saturation text colour tuning, same ranges as the desktop (color.js)
 //   categoryNames   null = not set on this phone (follow sync), or 5 entries (string | null = default name). SYNCED:
 //                   the same register the desktop syncs (AppSettings.CategoryNames).
+//   glowPulse       slow breathing of the neon glow (off by default; never with prefers-reduced-motion). LOCAL.
 //   categoryColors  5 entries ('#RRGGBB' | null = default). LOCAL ONLY: the desktop has fixed category colours.
 import { clampTuning } from './color.js';
 import { CATEGORY_COUNT } from './merge.js';
@@ -36,6 +37,7 @@ export function normalizeSettings(raw) {
     ...clampTuning(s.hue, s.saturation),
     categoryNames: s.categoryNames == null ? null : normalizeCategoryNames(s.categoryNames),
     categoryColors: normalizeCategoryColors(s.categoryColors),
+    glowPulse: s.glowPulse === true,
   };
 }
 

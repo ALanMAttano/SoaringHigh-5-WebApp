@@ -3,7 +3,8 @@ import { GOOGLE_CLIENT_ID } from './config.js';
 import { CATEGORY_COUNT, URGENCIES, stamp, toPlanner, parseDocument } from './merge.js';
 import {
   MAX_TEXT_LENGTH, addBacklog, addToFreeSlot, addToSlot, backlogByCategory, backlogByUrgency, completeBacklog, currentInSlot, deleteBacklog, deleteSlotTask, emptyPlanner,
-  displaySlots, ensureRollover, isSlotFree, localDay, reorderWithinUrgency, sendToToday, setSlotStatus, todayTaskFor, updateBacklog, updateSlotTask,
+  displaySlots, doneEntries, ensureRollover, isSlotFree, localDay, reopenBacklog, reorderWithinUrgency, restoreDone, sendToToday, setSlotStatus,
+  todayTaskFor, undoDelete, updateBacklog, updateSlotTask,
 } from './planner.js';
 import { GoogleAuth, DriveStore } from './sync.js';
 import { syncOnce } from './engine.js';
@@ -21,9 +22,9 @@ const PERIODIC_MS = 5 * 60 * 1000;
 const DAY_CHECK_MS = 60 * 1000;
 const URGENCY_COLORS = { urgentImportant: '#FF003C', urgent: '#FF7A1A', important: '#FFC400', normal: '#3DBA5A', wish: '#8FA8FF' };
 
-const TABS = ['today', 'todo', 'urgency'];
+const TABS = ['today', 'todo', 'urgency', 'done'];
 /** Screens; both TODO tabs show the TODO section (same add form), as a flat list or grouped by urgency. */
-const SECTION_OF = { today: 'today', todo: 'todo', urgency: 'todo', settings: 'settings' };
+const SECTION_OF = { today: 'today', todo: 'todo', urgency: 'todo', done: 'done', settings: 'settings' };
 const load = (k, fallback) => { try { return JSON.parse(localStorage.getItem(k)) ?? fallback; } catch { return fallback; } };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
@@ -61,6 +62,7 @@ function updateSettings(next, { rerender = true, sync = false } = {}) {
 /** Text hue/saturation: the tuned theme colours as CSS variables (live, all text and neon borders). */
 function applyTuning(tuning = state.settings) {
   for (const [name, value] of Object.entries(tunedTheme(tuning))) document.documentElement.style.setProperty(name, value);
+  document.body.classList.toggle('glow-pulse', state.settings.glowPulse);
 }
 
 // ------------------------------------------------------------------ data
@@ -171,6 +173,7 @@ function renderMain() {
   renderTabs();
   renderSlots();
   renderTodo();
+  renderDone();
   renderFooter();
 }
 
@@ -183,7 +186,7 @@ function renderTabs() {
   $('settings').classList.toggle('active', state.view === 'settings');
   $('settings').title = $('settings').ariaLabel = t().settings;
   $('hint').textContent = t().editHint;
-  $('hint').hidden = state.view === 'settings';
+  $('hint').hidden = state.view === 'settings' || state.view === 'done';
 }
 
 function showView(view) {
@@ -246,11 +249,12 @@ function editorForm({ text = '', category, urgency = 'normal', placeholder, save
   return form;
 }
 
-function confirmDelete(text, remove) {
-  if (!confirm(format(t().confirmDelete, text))) return;
-  remove();
+/** Deletes at once and offers UNDO for a few seconds (replaces the old confirm dialog). */
+function deleteWithUndo(remove) {
+  const undo = remove();
   editing.none();
   persist();
+  if (undo) showNotice(t().deleted, { label: t().undo, run: () => { if (undoDelete(state.planner, undo, localDay())) persist(); } });
 }
 
 // --- TODAY: the 5 slots
@@ -275,9 +279,9 @@ const busyFor = (own) => (slot) => slot !== own && !isSlotFree(state.planner, sl
  * category · urgency · actions on top and the text below at full width; landscape = one line. `category: null`
  * leaves the label out (the TODO tab's group heading already names it).
  */
-function taskRow({ category, text, textClass = '', urgency = null, onTap, actions = [] }) {
+function taskRow({ category, text, textClass = '', rowClass = '', urgency = null, onTap, actions = [] }) {
   const hasCategory = category !== null;
-  return el('li', { className: hasCategory ? 'task-row' : 'task-row no-cat' }, hasCategory ? categoryLabel(category) : null,
+  return el('li', { className: ['task-row', hasCategory ? '' : 'no-cat', rowClass].filter(Boolean).join(' ') }, hasCategory ? categoryLabel(category) : null,
     urgency ? urgencyPill(urgency) : el('span', { className: 'pill-space' }),
     el('div', { className: 'actions' }, ...actions),
     tappable(el('span', { className: `text ${textClass}`.trim(), textContent: text }), onTap));
@@ -306,7 +310,7 @@ function newTaskEditor(slot, busyCategory) {
 function taskEditor(task, busyCategory) {
   return editorForm({ text: task.text, category: task.slot, urgency: task.urgency, placeholder: t().placeholder, saveLabel: t().save, busyCategory,
     onSave: (text, category, urgency) => updateSlotTask(state.planner, task.id, text, urgency, category),
-    onDelete: () => confirmDelete(task.text, () => deleteSlotTask(state.planner, task.id, localDay())) });
+    onDelete: () => deleteWithUndo(() => deleteSlotTask(state.planner, task.id, localDay())) });
 }
 
 /** HOY long-press drag: only among tasks of the same urgency; otherwise the row snaps back with a short notice. */
@@ -340,23 +344,46 @@ function groupRows({ title, color, items }) {
 }
 
 function itemRow(item) {
+  const category = state.view === 'todo' ? null : item.category;
+  if (item.status === 'done') return doneItemRow(item, category);
   const inToday = todayTaskFor(state.planner, item.id, localDay());
-  return taskRow({ category: state.view === 'todo' ? null : item.category, text: item.text, urgency: item.urgency, onTap: () => editing.open('item', item.id),
+  return taskRow({ category, text: item.text, urgency: item.urgency, onTap: () => editing.open('item', item.id),
     actions: [inToday ? el('span', { className: 'tag', textContent: t().inToday }) : button(t().toToday, () => sendItemToToday(item)),
       button(t().done, () => { completeBacklog(state.planner, item.id, localDay()); persist(); })] });
 }
 
+/** A TODO item done in the last 48 h: struck through and dimmed, with UNDO (it leaves the list after 48 h). */
+function doneItemRow(item, category) {
+  return taskRow({ category, text: item.text, textClass: 'finished', rowClass: 'is-done', urgency: item.urgency,
+    actions: [button(t().undo, () => { reopenBacklog(state.planner, item.id, localDay()); persist(); })] });
+}
+
+// --- DONE: today's done tasks and done TODO items, newest first
+
+function renderDone() {
+  const rows = doneEntries(state.planner, localDay()).map((entry) => taskRow({ category: entry.category, text: entry.text,
+    textClass: 'finished', rowClass: 'is-done', urgency: entry.urgency,
+    actions: [el('span', { className: 'tag', textContent: entry.isToday ? t().tabs.today : doneTime(entry.doneAt) }),
+      button(t().restore, () => { if (restoreDone(state.planner, entry.id, localDay())) persist(); })] }));
+  $('done-list').replaceChildren(...(rows.length ? rows : [el('li', {}, el('span', { className: 'text empty', textContent: t().noDone }))]));
+  $('done-note').textContent = t().doneNote;
+}
+
+/** Day and time a TODO item was done ('–' for items finished before v2.39). */
+const doneTime = (iso) => (iso ? new Date(iso).toLocaleString(t().locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '–');
+
 function itemEditor(item) {
   return editorForm({ text: item.text, category: item.category, urgency: item.urgency, placeholder: t().todoPlaceholder, saveLabel: t().save,
     onSave: (text, category, urgency) => updateBacklog(state.planner, item.id, text, category, urgency, localDay()),
-    onDelete: () => confirmDelete(item.text, () => deleteBacklog(state.planner, item.id)) });
+    onDelete: () => deleteWithUndo(() => deleteBacklog(state.planner, item.id)) });
 }
 
 function sendItemToToday(item) {
   const { result, slot } = sendToToday(state.planner, item.id, localDay());
   const message = { moved: t().sent, swapped: t().swapped, outranked: t().outranked }[result];
   if (!message) { showResult(result); return; }
-  showNotice(format(message, categoryName(slot)));
+  const winner = result === 'outranked' ? currentInSlot(state.planner, slot, localDay())?.text ?? '' : '';
+  showNotice(format(message, categoryName(slot), winner));
   if (result === 'outranked') return;
   persist();
 }
@@ -436,13 +463,18 @@ function statusText(last) {
 }
 
 let noticeTimer = null;
+const NOTICE_MS = 6000;
 
-function showNotice(text) {
+/** A short notice for NOTICE_MS; `action` ({ label, run }) adds a button (e.g. UNDO) that also closes it. */
+function showNotice(text, action = null) {
   const notice = $('notice');
-  notice.textContent = text;
+  const hide = () => { notice.hidden = true; };
+  $('notice-text').textContent = text;
+  notice.querySelector('.btn')?.remove();
+  if (action) notice.append(button(action.label, () => { hide(); action.run(); }, 'btn primary'));
   notice.hidden = false;
   clearTimeout(noticeTimer);
-  noticeTimer = setTimeout(() => { notice.hidden = true; }, 6000);
+  noticeTimer = setTimeout(hide, NOTICE_MS);
 }
 
 // ------------------------------------------------------------------ start
