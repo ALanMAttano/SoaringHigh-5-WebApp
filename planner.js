@@ -242,17 +242,25 @@ const isRecentlyDone = (b, now) => b.status === 'done' && b.doneAt && now - Date
 /** Items listed in the TODO tabs: open ones, then the ones done in the last 48 h. */
 const listedBacklog = (p, now) => [...openBacklog(p), ...p.backlog.filter((b) => isRecentlyDone(b, now))];
 
-/** Groups in `keys` order; open items first in saved order, then recently done ones; empty groups left out. */
-function groupBacklog(p, now, keys, keyOf, orderKey) {
-  const rank = (b) => (b.status === 'open' ? 0 : 1);
-  return keys.map((key) => ({ key,
-    items: listedBacklog(p, now).filter((b) => keyOf(b) === key).sort((a, b) => rank(a) - rank(b) || (a[orderKey] ?? 0) - (b[orderKey] ?? 0)) }))
+const openRank = (b) => (b.status === 'open' ? 0 : 1);
+const urgencyIndex = (b) => URGENCIES.indexOf(b.urgency);
+
+/**
+ * Groups in `keys` order, empty groups left out. Open items first, then recently done ones; inside each, by
+ * `rankOf` (if given), then saved order. Display only.
+ */
+function groupBacklog(p, now, keys, keyOf, orderKey, rankOf = () => 0) {
+  const compare = (a, b) => openRank(a) - openRank(b) || rankOf(a) - rankOf(b) || (a[orderKey] ?? 0) - (b[orderKey] ?? 0);
+  return keys.map((key) => ({ key, items: listedBacklog(p, now).filter((b) => keyOf(b) === key).sort(compare) }))
     .filter((g) => g.items.length);
 }
 
-/** TODO tab: by category (in the user's slot order). Done items from the last 48 h are included (struck through). */
+/**
+ * TODO tab: by category (in the user's slot order), most urgent first inside each group (ties: saved order), as the
+ * desktop's Planner.DisplayGroup. Done items from the last 48 h follow the open ones (struck through).
+ */
 export function backlogByCategory(p, now = Date.now()) {
-  return groupBacklog(p, now, normalizeSlotOrder(p.slotOrder), (b) => b.category, 'categoryOrder')
+  return groupBacklog(p, now, normalizeSlotOrder(p.slotOrder), (b) => b.category, 'categoryOrder', urgencyIndex)
     .map(({ key, items }) => ({ category: key, items }));
 }
 

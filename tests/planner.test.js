@@ -242,7 +242,7 @@ test('HOY add form: chosen category when free, else the first free slot, refused
   assert.equal(full.slotTasks.length, 5);
 });
 
-test('TODO tab grouped by category in slot order, saved order inside a group, open items only', () => {
+test('TODO tab grouped by category in slot order, most urgent first inside a group, open items only', () => {
   const p = emptyPlanner();
   p.slotOrder = [3, 0, 1, 2, 4];
   const id = ids();
@@ -253,7 +253,7 @@ test('TODO tab grouped by category in slot order, saved order inside a group, op
   const t0 = Date.parse('2026-10-16T12:00:00Z');
   completeBacklog(p, 'id-4', DAY, t0);
   const later = t0 + DONE_VISIBLE_MS + 1;
-  assert.deepEqual(backlogByCategory(p, later).map((g) => [g.category, g.items.map((b) => b.text)]), [[3, ['b3']], [0, ['a0', 'c0']]]);
+  assert.deepEqual(backlogByCategory(p, later).map((g) => [g.category, g.items.map((b) => b.text)]), [[3, ['b3']], [0, ['c0', 'a0']]]);
 });
 
 test('done TODO items stay listed (after the open ones) for 48 h, then leave the TODO tabs; UNDO reopens', () => {
@@ -321,4 +321,15 @@ test('undo delete fails when the slot got a new pending task meanwhile', () => {
   addToSlot(p, 1, 'new', 'normal', DAY, () => 'new');
   assert.equal(undoDelete(p, undo, DAY), false);
   assert.equal(currentInSlot(p, 1, DAY).id, 'new');
+});
+
+test('TODO tab inside a category: urgency first, ties keep saved order, done items after the open ones', () => {
+  const p = emptyPlanner();
+  const id = ids();
+  for (const [text, urgency] of [['n1', 'normal'], ['u1', 'urgent'], ['n2', 'normal'], ['w1', 'wish'], ['u2', 'urgent']]) addBacklog(p, text, 0, urgency, id);
+  const t0 = Date.parse('2026-10-16T12:00:00Z');
+  completeBacklog(p, 'id-2', DAY, t0);
+  assert.deepEqual(backlogByCategory(p, t0)[0].items.map((b) => b.text), ['u2', 'n1', 'n2', 'w1', 'u1']);
+  assert.deepEqual(p.backlog.map((b) => b.categoryOrder), [0, 1, 2, 3, 4]); // display only
+  assert.deepEqual(backlogByUrgency(p, t0).map((g) => g.items.map((b) => b.text)), [['u2', 'u1'], ['n1', 'n2'], ['w1']]);
 });
