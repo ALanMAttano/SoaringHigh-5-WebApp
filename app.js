@@ -8,7 +8,7 @@ import {
 } from './planner.js';
 import { GoogleAuth, DriveStore } from './sync.js';
 import { syncOnce } from './engine.js';
-import { format, pickLanguage, texts } from './i18n.js';
+import { GLYPHS, format, pickLanguage, texts } from './i18n.js';
 import { tunedTheme } from './color.js';
 import { APP_NAME, PWA_VERSION } from './app-info.js';
 import { adoptSyncedCategoryNames, categoryColor, categoryNamesForSync, customCategoryName, loadSettings, saveSettings } from './settings.js';
@@ -291,7 +291,7 @@ const editorRow = (editor) => el('li', { className: 'editor-row-item' }, editor)
 
 function pendingTaskRow(task) {
   return taskRow({ category: task.slot, text: task.text, urgency: task.urgency, onTap: () => editing.open('task', task.id),
-    actions: [button(t().done, () => markStatus(task.id, 'done'))] });
+    actions: [doneButton(() => markStatus(task.id, 'done'))] });
 }
 
 /** A free slot: empty, or holding today's finished task (tap to add a new one, UNDO to reopen). */
@@ -349,7 +349,7 @@ function itemRow(item) {
   const inToday = todayTaskFor(state.planner, item.id, localDay());
   return taskRow({ category, text: item.text, urgency: item.urgency, onTap: () => editing.open('item', item.id),
     actions: [inToday ? el('span', { className: 'tag', textContent: t().inToday }) : button(t().toToday, () => sendItemToToday(item)),
-      button(t().done, () => { completeBacklog(state.planner, item.id, localDay()); persist(); })] });
+      doneButton(() => { completeBacklog(state.planner, item.id, localDay()); persist(); })] });
 }
 
 /** A TODO item done in the last 48 h: struck through and dimmed, with UNDO (it leaves the list after 48 h). */
@@ -412,6 +412,14 @@ function refreshAddForm(prefix, placeholder, busyCategory) {
   const chosen = category.value === '' || (busyCategory && busyCategory(Number(category.value))) ? free : Number(category.value);
   category.replaceWith(categorySelect(category.id, chosen, busyCategory));
   urgency.replaceWith(urgencySelect(urgency.id, urgency.value || 'normal'));
+}
+
+/** The DONE action (wish #10): a ✓, named "Mark done" for screen readers and as tooltip. UNDO keeps its word. */
+function doneButton(onClick) {
+  const b = button(GLYPHS.check, onClick, 'btn glyph');
+  b.title = t().markDone;
+  b.setAttribute('aria-label', t().markDone);
+  return b;
 }
 
 /** HOY add form: same rule as the desktop main window; a short notice says where the task went. */

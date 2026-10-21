@@ -56,3 +56,15 @@ test('v2.43 rotation: manifest fresh and stable identity, nothing locks portrait
   assert.match(read('index.html'), new RegExp(`manifest\\.json\\?v=${PWA_VERSION.slice(1)}`));
   for (const f of ['app.js', 'reorder.js', 'styles.css', 'index.html']) assert.ok(!/orientation\.lock|orientation:\s*portrait/.test(read(f)), f);
 });
+
+test('wish #10: DONE is a ✓ with a localized name, tap target ≥ 44 px, UNDO keeps its word', async () => {
+  const { texts, GLYPHS, LANGUAGES } = await import('../i18n.js');
+  assert.equal(GLYPHS.check, '✓');
+  for (const l of LANGUAGES) assert.ok(texts(l).markDone && texts(l).undo !== GLYPHS.check, l);
+  const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(app, /button\(GLYPHS\.check, onClick, 'btn glyph'\)/);
+  assert.match(app, /setAttribute\('aria-label', t\(\)\.markDone\)/);
+  assert.ok(!/button\(t\(\)\.done,/.test(app));
+  const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.btn\.glyph \{[^}]*min-width: 44px; min-height: 44px/);
+});

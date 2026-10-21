@@ -8,7 +8,7 @@ const TEXTS = {
     syncHeading: 'SINCRONIZACIÓN', status: 'Estado', lastSync: 'Última sincronización',
     appHeading: 'APP', changeLog: 'Registro de cambios', viewChangeLog: 'VER CAMBIOS',
     changeLogTip: 'Abre el historial de versiones en GitHub (hay que iniciar sesión: el repositorio es privado).', madeBy: 'hecho por {0}',
-    add: 'AGREGAR', save: 'GUARDAR', delete: 'BORRAR', done: 'HECHO', undo: 'DESHACER', glowPulse: 'Pulso del brillo', on: 'SÍ', off: 'NO', restore: 'RESTAURAR', deleted: 'Borrada.', noDone: 'Nada terminado todavía.', doneNote: 'Los TODO hechos quedan 30 días (48 h también en TODO/URGENCIA); las tareas de hoy hasta el cambio de día.', cancel: 'CANCELAR',
+    add: 'AGREGAR', save: 'GUARDAR', delete: 'BORRAR', markDone: 'Marcar como hecha', undo: 'DESHACER', glowPulse: 'Pulso del brillo', on: 'SÍ', off: 'NO', restore: 'RESTAURAR', deleted: 'Borrada.', noDone: 'Nada terminado todavía.', doneNote: 'Los TODO hechos quedan 30 días (48 h también en TODO/URGENCIA); las tareas de hoy hasta el cambio de día.', cancel: 'CANCELAR',
     toToday: '→ HOY', inToday: 'EN HOY', locale: 'es-AR',
     emptySlot: 'Libre: tocá para agregar una tarea', placeholder: 'Tarea de hoy…', todoPlaceholder: 'Nueva tarea para la lista…',
     editHint: 'Tocá una tarea para editarla; mantené presionado y arrastrá para reordenar entre las de igual urgencia.', sameUrgencyOnly: 'Solo se puede reordenar entre tareas de la misma urgencia.', category: 'Categoría', urgencyLabel: 'Urgencia',
@@ -32,7 +32,7 @@ const TEXTS = {
     syncHeading: 'SYNC', status: 'Status', lastSync: 'Last sync',
     appHeading: 'APP', changeLog: 'Change log', viewChangeLog: 'VIEW CHANGE LOG',
     changeLogTip: 'Opens the release history on GitHub (sign-in needed: the repository is private).', madeBy: 'made by {0}',
-    add: 'ADD', save: 'SAVE', delete: 'DELETE', done: 'DONE', undo: 'UNDO', glowPulse: 'Glow pulse', on: 'ON', off: 'OFF', restore: 'RESTORE', deleted: 'Deleted.', noDone: 'Nothing finished yet.', doneNote: "Done TODOs are kept 30 days (48 h also in TODO/URGENCY); today's done tasks until the day changes.", cancel: 'CANCEL',
+    add: 'ADD', save: 'SAVE', delete: 'DELETE', markDone: 'Mark done', undo: 'UNDO', glowPulse: 'Glow pulse', on: 'ON', off: 'OFF', restore: 'RESTORE', deleted: 'Deleted.', noDone: 'Nothing finished yet.', doneNote: "Done TODOs are kept 30 days (48 h also in TODO/URGENCY); today's done tasks until the day changes.", cancel: 'CANCEL',
     toToday: '→ TODAY', inToday: 'TODAY', locale: 'en-US',
     emptySlot: 'Free: tap to add a task', placeholder: "Today's task…", todoPlaceholder: 'New task for the list…',
     editHint: 'Tap a task to edit it; long-press and drag to reorder tasks of the same urgency.', sameUrgencyOnly: 'Tasks can only be reordered among the same urgency.', category: 'Category', urgencyLabel: 'Urgency',
@@ -56,7 +56,7 @@ const TEXTS = {
     syncHeading: 'SINCRONIZZAZIONE', status: 'Stato', lastSync: 'Ultima sincronizzazione',
     appHeading: 'APP', changeLog: 'Registro modifiche', viewChangeLog: 'VEDI MODIFICHE',
     changeLogTip: "Apre la cronologia delle versioni su GitHub (serve l'accesso: il repository è privato).", madeBy: 'creato da {0}',
-    add: 'AGGIUNGI', save: 'SALVA', delete: 'ELIMINA', done: 'FATTO', undo: 'ANNULLA', glowPulse: 'Pulsazione del bagliore', on: 'SÌ', off: 'NO', restore: 'RIPRISTINA', deleted: 'Eliminato.', noDone: 'Ancora niente di completato.', doneNote: 'I TODO fatti restano 30 giorni (48 h anche in TODO/URGENZA); i compiti di oggi fino al cambio di giorno.', cancel: 'CHIUDI',
+    add: 'AGGIUNGI', save: 'SALVA', delete: 'ELIMINA', markDone: 'Segna come fatto', undo: 'ANNULLA', glowPulse: 'Pulsazione del bagliore', on: 'SÌ', off: 'NO', restore: 'RIPRISTINA', deleted: 'Eliminato.', noDone: 'Ancora niente di completato.', doneNote: 'I TODO fatti restano 30 giorni (48 h anche in TODO/URGENZA); i compiti di oggi fino al cambio di giorno.', cancel: 'CHIUDI',
     toToday: '→ OGGI', inToday: 'OGGI', locale: 'it-IT',
     emptySlot: 'Libero: tocca per aggiungere un compito', placeholder: 'Compito di oggi…', todoPlaceholder: 'Nuovo compito per la lista…',
     editHint: 'Tocca un compito per modificarlo; tieni premuto e trascina per riordinare quelli con la stessa urgenza.', sameUrgencyOnly: 'Si può riordinare solo tra compiti con la stessa urgenza.', category: 'Categoria', urgencyLabel: 'Urgenza',
@@ -86,6 +86,9 @@ export function pickLanguage(saved, browserLanguages) {
 }
 
 export function texts(lang) { return TEXTS[lang] || TEXTS.es; }
+
+/** Button symbols, the same in every language (desktop Core/UiGlyphs.cs); words go in the tooltip/aria-label. */
+export const GLYPHS = Object.freeze({ check: '✓' });
 
 export function format(pattern, ...args) {
   return pattern.replace(/\{(\d+)\}/g, (_, i) => String(args[Number(i)] ?? ''));

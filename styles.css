@@ -113,3 +113,7 @@ body { text-shadow: 0 0 1px currentColor, 0 0 6px color-mix(in srgb, currentColo
 @keyframes glow-pulse { 50% { box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 55%, transparent), inset 0 0 8px color-mix(in srgb, var(--neon) 18%, transparent); } }
 body.glow-pulse .btn:not(:disabled), body.glow-pulse .tab { animation: glow-pulse 3.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { body.glow-pulse .btn, body.glow-pulse .tab { animation: none; } }
+
+/* Symbol buttons (wish #10: DONE is a ✓): bigger glyph, square ≥ 44 px tap target, symbol-font fallback. */
+.btn.glyph { font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", system-ui, sans-serif; font-size: 1.35em;
+  line-height: 1; min-width: 44px; min-height: 44px; padding: 6px 12px; }
