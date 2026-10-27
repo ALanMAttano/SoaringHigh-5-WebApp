@@ -4,7 +4,7 @@ import { CATEGORY_COUNT, URGENCIES, stamp, toPlanner, parseDocument } from './me
 import {
   MAX_TEXT_LENGTH, addBacklog, addToSlot, addToToday, backlogByCategory, backlogByUrgency, completeBacklog, currentInSlot, deleteBacklog, deleteSlotTask, emptyPlanner,
   displaySlots, doneEntries, ensureRollover, isSlotFree, localDay, reopenBacklog, reorderWithinUrgency, restoreDone, sendToToday, setSlotStatus,
-  todayTaskFor, undoDelete, updateBacklog, updateSlotTask,
+  formatDue, todayTaskFor, undoDelete, updateBacklog, updateSlotTask,
 } from './planner.js';
 import { GoogleAuth, DriveStore } from './sync.js';
 import { syncOnce } from './engine.js';
@@ -291,7 +291,7 @@ const editorRow = (editor) => el('li', { className: 'editor-row-item' }, editor)
 
 function pendingTaskRow(task) {
   return taskRow({ category: task.slot, text: task.text, urgency: task.urgency, onTap: () => editing.open('task', task.id),
-    actions: [doneButton(() => markStatus(task.id, 'done'))] });
+    actions: [dueTag(task), doneButton(() => markStatus(task.id, 'done'))] });
 }
 
 /** A free slot: empty, or holding today's finished task (tap to add a new one, UNDO to reopen). */
@@ -343,12 +343,18 @@ function groupRows({ title, color, items }) {
   return [heading, ...items.map((item) => (editing.is('item', item.id) ? editorRow(itemEditor(item)) : itemRow(item)))];
 }
 
+/** Read-only date label of a task or item that has a due date (set on the desktop); nothing otherwise. */
+function dueTag(x) {
+  const label = formatDue(x.dueDate, t().locale);
+  return label ? el('span', { className: 'tag due', textContent: label, title: label }) : null;
+}
+
 function itemRow(item) {
   const category = state.view === 'todo' ? null : item.category;
   if (item.status === 'done') return doneItemRow(item, category);
   const inToday = todayTaskFor(state.planner, item.id, localDay());
   return taskRow({ category, text: item.text, urgency: item.urgency, onTap: () => editing.open('item', item.id),
-    actions: [inToday ? el('span', { className: 'tag', textContent: t().inToday }) : button(t().toToday, () => sendItemToToday(item)),
+    actions: [dueTag(item), inToday ? el('span', { className: 'tag', textContent: t().inToday }) : button(t().toToday, () => sendItemToToday(item)),
       doneButton(() => { completeBacklog(state.planner, item.id, localDay()); persist(); })] });
 }
 

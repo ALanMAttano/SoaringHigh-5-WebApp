@@ -28,8 +28,8 @@ export function normalizeSlotOrder(order) {
   return seen;
 }
 
-const TASK_FIELDS = ['deleted', 'date', 'slot', 'text', 'urgency', 'status', 'backlogId', 'doneAt'];
-const ITEM_FIELDS = ['deleted', 'text', 'category', 'urgency', 'status', 'categoryOrder', 'urgencyOrder', 'doneAt'];
+const TASK_FIELDS = ['deleted', 'date', 'slot', 'text', 'urgency', 'status', 'backlogId', 'doneAt', 'dueDate'];
+const ITEM_FIELDS = ['deleted', 'text', 'category', 'urgency', 'status', 'categoryOrder', 'urgencyOrder', 'doneAt', 'dueDate'];
 const same = (fields) => (a, b) => fields.every((f) => (a[f] ?? null) === (b[f] ?? null));
 export const sameTask = same(TASK_FIELDS);
 export const sameItem = same(ITEM_FIELDS);
@@ -252,6 +252,7 @@ function returnToBacklog(doc, task) {
     id: task.id, text: task.text, category: task.slot, urgency: task.urgency ?? 'normal', status: 'open',
     categoryOrder: next(live.filter((b) => b.category === task.slot), 'categoryOrder'),
     urgencyOrder: next(live.filter((b) => (b.urgency ?? 'normal') === (task.urgency ?? 'normal')), 'urgencyOrder'),
+    ...(task.dueDate ? { dueDate: task.dueDate } : {}),
     updatedAt: task.updatedAt, deviceId: task.deviceId, deleted: false,
   });
 }

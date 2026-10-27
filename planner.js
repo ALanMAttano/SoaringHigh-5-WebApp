@@ -166,8 +166,8 @@ export function addBacklog(p, text, category, urgency, newId = () => crypto.rand
 }
 
 /** A new open item at the end of its category and urgency groups. */
-function newItem(p, id, text, category, urgency) {
-  return { id, text, category, urgency, status: 'open',
+function newItem(p, id, text, category, urgency, dueDate = null) {
+  return { id, text, category, urgency, status: 'open', ...(dueDate ? { dueDate } : {}),
     categoryOrder: nextOrder(p, (b) => b.category === category, 'categoryOrder'),
     urgencyOrder: nextOrder(p, (b) => b.urgency === urgency, 'urgencyOrder') };
 }
@@ -360,7 +360,8 @@ export function sendToToday(p, itemId, day) {
 function moveIntoSlot(p, item, slot, day) {
   remove(p.backlog, item);
   for (const t of p.slotTasks) if (t.backlogId === item.id) t.backlogId = null;
-  placeInSlot(p, { id: item.id, date: day, slot, text: item.text, urgency: item.urgency, status: 'pending', backlogId: null });
+  placeInSlot(p, { id: item.id, date: day, slot, text: item.text, urgency: item.urgency, status: 'pending', backlogId: null,
+    ...(item.dueDate ? { dueDate: item.dueDate } : {}) });
 }
 
 /** Sort key of a slot on HOY: its task's urgency (pending or done alike); empty slots last. */
@@ -437,5 +438,13 @@ function returnToBacklog(p, t) {
     item.status = 'open';
     return;
   }
-  p.backlog.push(newItem(p, t.id, t.text, t.slot, t.urgency));
+  p.backlog.push(newItem(p, t.id, t.text, t.slot, t.urgency, t.dueDate));
+}
+
+/** Optional due date set by the desktop (Drive Bridge): "YYYY-MM-DD" as a short local label, '' when absent or malformed. Read-only here. */
+export function formatDue(dueDate, locale) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dueDate ?? '');
+  if (!m) return '';
+  const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
 }
